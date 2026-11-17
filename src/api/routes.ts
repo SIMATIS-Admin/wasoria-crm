@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, ilike, isNull, lte } from 'drizzle-orm';
+import { asc, desc, eq, gte, ilike, isNull, lte } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { ZodError, z } from 'zod';
 import type { ServiceOdoo } from '../connecteurs/odoo/service.js';
@@ -11,6 +11,8 @@ import {
   rendezVous,
   taches,
 } from '../db/schema.js';
+import { registerEchange } from '../echange/routes.js';
+import { registerLiens } from '../echange/liens.js';
 import { enregistrer } from './ressource.js';
 import { creation, idSchema, miseAJour, TYPES_TACHE } from './schemas.js';
 
@@ -53,6 +55,7 @@ export function registerRoutes(app: FastifyInstance, db: Db, odoo?: ServiceOdoo)
 
   enregistrer(app, db, {
     chemin: '/entreprises',
+    objet: 'entreprise',
     table: entreprises,
     creation: creation.entreprise,
     miseAJour: miseAJour.entreprise,
@@ -63,6 +66,7 @@ export function registerRoutes(app: FastifyInstance, db: Db, odoo?: ServiceOdoo)
 
   enregistrer(app, db, {
     chemin: '/contacts',
+    objet: 'contact',
     table: contacts,
     creation: creation.contact,
     miseAJour: miseAJour.contact,
@@ -74,6 +78,7 @@ export function registerRoutes(app: FastifyInstance, db: Db, odoo?: ServiceOdoo)
   // Une étape qui change est datée, comme dans l'OS (etapes_dates).
   enregistrer(app, db, {
     chemin: '/affaires',
+    objet: 'affaire',
     table: opportunites,
     creation: creation.affaire,
     miseAJour: miseAJour.affaire,
@@ -98,6 +103,7 @@ export function registerRoutes(app: FastifyInstance, db: Db, odoo?: ServiceOdoo)
 
   enregistrer(app, db, {
     chemin: '/taches',
+    objet: 'tache',
     table: taches,
     creation: creation.tache,
     miseAJour: miseAJour.tache,
@@ -151,6 +157,7 @@ export function registerRoutes(app: FastifyInstance, db: Db, odoo?: ServiceOdoo)
 
   enregistrer(app, db, {
     chemin: '/rendez-vous',
+    objet: 'rendez_vous',
     table: rendezVous,
     creation: creation.rendezVous,
     miseAJour: miseAJour.rendezVous,
@@ -174,29 +181,29 @@ export function registerRoutes(app: FastifyInstance, db: Db, odoo?: ServiceOdoo)
     },
   });
 
-  // Historique d'un compte, d'un contact ou d'une affaire (lecture seule pour l'instant).
-  app.get('/activites', async (request) => {
-    const q = z
-      .object({
-        entrepriseId: idSchema.optional(),
-        contactId: idSchema.optional(),
-        opportuniteId: idSchema.optional(),
-        limite: z.coerce.number().int().min(1).max(200).default(50),
-      })
-      .parse(request.query);
-    return db
-      .select()
-      .from(activites)
-      .where(
-        and(
-          q.entrepriseId ? eq(activites.entrepriseId, q.entrepriseId) : undefined,
-          q.contactId ? eq(activites.contactId, q.contactId) : undefined,
-          q.opportuniteId ? eq(activites.opportuniteId, q.opportuniteId) : undefined,
-        ),
-      )
-      .orderBy(desc(activites.at))
-      .limit(q.limite);
+  // Historique d'un compte, d'un contact ou d'une affaire.
+  enregistrer(app, db, {
+    chemin: '/activites',
+    objet: 'activite',
+    table: activites,
+    creation: creation.activite,
+    miseAJour: miseAJour.activite,
+    filtres: z.object({
+      entrepriseId: idSchema.optional(),
+      contactId: idSchema.optional(),
+      opportuniteId: idSchema.optional(),
+    }),
+    ou: (f) => [
+      f.entrepriseId ? eq(activites.entrepriseId, f.entrepriseId as string) : undefined,
+      f.contactId ? eq(activites.contactId, f.contactId as string) : undefined,
+      f.opportuniteId ? eq(activites.opportuniteId, f.opportuniteId as string) : undefined,
+    ],
+    ordre: [desc(activites.at)],
+    avant: (corps) => convertir(corps, ['at']),
   });
+
+  registerLiens(app, db);
+  registerEchange(app, db);
 
   // Synchronisation avec Odoo : lecture seule, une à la fois. Absente tant qu'Odoo n'est pas configuré.
   app.post('/odoo/synchro', async (request, reply) => {

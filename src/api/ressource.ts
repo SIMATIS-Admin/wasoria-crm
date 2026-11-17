@@ -3,7 +3,8 @@ import type { PgColumn, PgTable } from 'drizzle-orm/pg-core';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type { Db } from '../db/index.js';
-import type { entreprises } from '../db/schema.js';
+import { suppressions, type entreprises } from '../db/schema.js';
+import type { ObjetEchange } from '../echange/profil.js';
 import { idSchema, pagination } from './schemas.js';
 
 type Ligne = Record<string, unknown>;
@@ -12,6 +13,8 @@ type Cible = PgTable & { id: PgColumn };
 
 export type Definition = {
   chemin: string;
+  // Nom de l'objet dans le profil d'échange : sa suppression est alors journalisée pour l'OS.
+  objet?: ObjetEchange;
   table: Cible;
   creation: z.ZodType<Ligne>;
   miseAJour: z.ZodType<Ligne>;
@@ -79,7 +82,13 @@ export function enregistrer(app: FastifyInstance, db: Db, d: Definition): void {
 
   app.delete(`${d.chemin}/:id`, async (request, reply) => {
     const { id } = z.object({ id: idSchema }).parse(request.params);
-    const supprimees = await db.delete(table).where(eq(table.id, id)).returning();
+    const supprimees = await db.transaction(async (tx) => {
+      const lignes = await tx.delete(table).where(eq(table.id, id)).returning();
+      if (lignes.length && d.objet) {
+        await tx.insert(suppressions).values({ objet: d.objet, ficheId: id });
+      }
+      return lignes;
+    });
     return supprimees.length ? reply.code(204).send() : reply.code(404).send(introuvable);
   });
 }
