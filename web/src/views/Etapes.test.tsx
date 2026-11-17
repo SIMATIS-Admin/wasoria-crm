@@ -23,7 +23,13 @@ function simuler(reponses: Record<string, () => Response> = {}) {
     const cle = `${methode} ${url}`;
     const r = reponses[cle]?.();
     return Promise.resolve(
-      r ?? new Response(JSON.stringify(methode === 'GET' ? ETAPES : {}), { status: 200 }),
+      r ??
+        new Response(
+          JSON.stringify(methode === 'GET' ? (url === '/api/pipelines' ? [] : ETAPES) : {}),
+          {
+            status: 200,
+          },
+        ),
     );
   });
   return appels;
@@ -56,7 +62,7 @@ describe('Étapes', () => {
     await waitFor(() =>
       expect(appels.find((a) => a.methode === 'PUT')).toMatchObject({
         url: '/api/etapes/ordre',
-        corps: { ids: ['b', 'a'] },
+        corps: { ids: ['b', 'a'], pipeline: 'vente' },
       }),
     );
   });
@@ -90,7 +96,7 @@ describe('Étapes', () => {
     await waitFor(() =>
       expect(appels.find((a) => a.methode === 'POST')).toMatchObject({
         url: '/api/etapes',
-        corps: { label: 'Signature', probabilite: 90 },
+        corps: { label: 'Signature', probabilite: 90, pipeline: 'vente' },
       }),
     );
   });

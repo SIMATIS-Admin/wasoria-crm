@@ -6,7 +6,7 @@ import { creerAuth } from './service.js';
 
 let base: Awaited<ReturnType<typeof demarrerBase>>;
 const MDP = 'un-mot-de-passe-solide';
-const cookies: Record<Role, string> = { admin: '', commercial: '', lecture: '' };
+const cookies: Record<Role, string> = { admin: '', commercial: '', 'apres-vente': '', lecture: '' };
 let auth: ReturnType<typeof creerAuth>;
 
 const cookieDe = (set: string | string[] | undefined) =>

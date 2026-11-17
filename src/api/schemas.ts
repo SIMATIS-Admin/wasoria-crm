@@ -40,6 +40,10 @@ export const qualification = z.strictObject({
 });
 
 export const affaire = z.strictObject({
+  // Le pipe se choisit à la création et ne change plus ; `origineAffaireId` relie un dossier
+  // après-vente à la vente dont il vient.
+  pipeline: z.string().optional(),
+  origineAffaireId: id.nullable().optional(),
   entrepriseId: id.nullable().optional(),
   contactId: id.nullable().optional(),
   titre: texte,
@@ -108,7 +112,7 @@ export const creation = { entreprise, contact, affaire, tache, rendezVous, activ
 export const miseAJour = {
   entreprise: entreprise.partial(),
   contact: contact.partial(),
-  affaire: affaire.partial(),
+  affaire: affaire.omit({ pipeline: true, origineAffaireId: true }).partial(),
   tache: tache.partial(),
   rendezVous: rendezVous.partial(),
   activite: activite.partial(),

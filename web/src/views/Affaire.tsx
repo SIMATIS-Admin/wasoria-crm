@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { appel } from '../api';
+import { appel, ErreurApi } from '../api';
 import { TYPES_TACHE, libelleType } from '../etapes';
 import { CRITERES, eur, enRetard, jour, niveau, score } from '../format';
 import type {
@@ -25,15 +25,19 @@ export function Affaire({ id }: { id: string }) {
   const contacts = useApi<Contact[]>(
     affaire.donnees?.entrepriseId ? `/contacts?entrepriseId=${affaire.donnees.entrepriseId}` : null,
   );
-  const etapes = useApi<Etape[]>('/etapes');
+  const etapes = useApi<Etape[]>(
+    affaire.donnees ? `/etapes?pipeline=${affaire.donnees.pipelineId}` : null,
+  );
   const taches = useApi<Tache[]>(`/taches?opportuniteId=${id}&limite=100`);
   const activites = useApi<Activite[]>(`/activites?opportuniteId=${id}`);
-  const { peutEcrire } = useRole();
+  const { peutEcrire, peutModifierAffaire } = useRole();
+  const [message, setMessage] = useState<string | null>(null);
   const [onglet, setOnglet] = useState<Onglet>('suivi');
   const [creation, setCreation] = useState(false);
 
   const a = affaire.donnees;
   if (!a || !etapes.donnees) return <Chargement erreur={affaire.erreur ?? etapes.erreur} />;
+  const editable = peutModifierAffaire(a.pipelineId);
   const indice = etapes.donnees.findIndex((e) => e.id === a.etape);
   const n = score(a.qualification);
   const niv = niveau(n);
@@ -60,6 +64,17 @@ export function Affaire({ id }: { id: string }) {
       },
     });
 
+  // Une vente gagnée ouvre un dossier après-vente : on s'y rend, ou on y est déjà.
+  const creerDossier = async () => {
+    setMessage(null);
+    try {
+      const d = await appel<{ id: string }>('POST', `/affaires/${id}/apres-vente`, {});
+      window.location.hash = `affaire/${d.id}`;
+    } catch (e) {
+      setMessage(e instanceof ErreurApi ? e.message : 'Création impossible');
+    }
+  };
+
   return (
     <>
       <div>
@@ -67,7 +82,7 @@ export function Affaire({ id }: { id: string }) {
           ← Pipe
         </a>
         <h2 className="titre-fiche">
-          {a.titre}{' '}
+          {a.titre} {a.pipelineId === 'apres-vente' && <Pill classe="p-acc">Après-vente</Pill>}{' '}
           {a.clos && (
             <Pill classe={a.clos === 'gagne' ? 'p-ok' : 'p-cold'}>
               {a.clos === 'gagne' ? 'Gagnée' : 'Perdue'}
@@ -79,13 +94,21 @@ export function Affaire({ id }: { id: string }) {
             {entreprise.donnees.nom}
           </a>
         )}
+        {a.origineAffaireId && (
+          <>
+            {' · '}
+            <a className="link" href={`#affaire/${a.origineAffaireId}`}>
+              Vente d’origine
+            </a>
+          </>
+        )}
       </div>
       <div className="stepper">
         {etapes.donnees.map((e, i) => (
           <button
             key={e.id}
             className={`step ${i < indice ? 'done' : i === indice ? 'cur' : ''}`}
-            disabled={!peutEcrire}
+            disabled={!editable}
             onClick={() => void modifier({ etape: e.id })}
           >
             {e.label}
@@ -174,7 +197,7 @@ export function Affaire({ id }: { id: string }) {
                       min={0}
                       max={3}
                       value={a.qualification?.[cle] ?? 0}
-                      disabled={!peutEcrire}
+                      disabled={!editable}
                       onChange={(e) => void noter(cle, Number(e.target.value))}
                     />
                     <b className="num">{a.qualification?.[cle] ?? 0}/3</b>
@@ -208,7 +231,7 @@ export function Affaire({ id }: { id: string }) {
             </div>
           </Panel>
           <div className="actions">
-            {!peutEcrire ? null : a.clos ? (
+            {!editable ? null : a.clos ? (
               <button className="ghost" onClick={() => void modifier({ clos: null })}>
                 Rouvrir
               </button>
@@ -223,6 +246,14 @@ export function Affaire({ id }: { id: string }) {
               </>
             )}
           </div>
+          {peutEcrire && a.pipelineId === 'vente' && a.clos === 'gagne' && (
+            <div className="actions">
+              <button className="cta" onClick={() => void creerDossier()}>
+                Créer le dossier après-vente
+              </button>
+            </div>
+          )}
+          {message && <div className="alert">{message}</div>}
         </div>
       </div>
       {creation && (

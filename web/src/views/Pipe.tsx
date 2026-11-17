@@ -1,15 +1,19 @@
 import { useState } from 'react';
 import { eur, enRetard, jour, montantOuvert, niveau, parEtape, score } from '../format';
-import type { Affaire, Entreprise, Etape } from '../types';
+import type { Affaire, Entreprise, Etape, Pipeline } from '../types';
 import { useApi } from '../useApi';
 import { useRole } from '../role';
 import { Chargement, Formulaire, Pill } from '../ui';
 
 export function Pipe() {
-  const affaires = useApi<Affaire[]>('/affaires?ouvertes=1&limite=200');
+  const { role, peutModifierAffaire } = useRole();
+  // Le rôle après-vente ouvre directement son pipe.
+  const [pipe, setPipe] = useState(role === 'apres-vente' ? 'apres-vente' : 'vente');
+  const pipelines = useApi<Pipeline[]>('/pipelines');
+  const affaires = useApi<Affaire[]>(`/affaires?ouvertes=1&limite=200&pipeline=${pipe}`);
   const entreprises = useApi<Entreprise[]>('/entreprises?limite=200');
-  const etapes = useApi<Etape[]>('/etapes');
-  const { peutEcrire } = useRole();
+  const etapes = useApi<Etape[]>(`/etapes?pipeline=${pipe}`);
+  const peutEcrire = peutModifierAffaire(pipe);
   const [creation, setCreation] = useState(false);
   if (!affaires.donnees || !entreprises.donnees || !etapes.donnees) {
     return <Chargement erreur={affaires.erreur ?? entreprises.erreur ?? etapes.erreur} />;
@@ -18,13 +22,26 @@ export function Pipe() {
 
   return (
     <>
-      {peutEcrire && (
-        <div>
+      <div className="periode">
+        {pipelines.donnees && pipelines.donnees.length > 1 && (
+          <div className="seg" role="group" aria-label="Pipe">
+            {pipelines.donnees.map((p) => (
+              <button
+                key={p.id}
+                className={pipe === p.id ? 'on' : ''}
+                onClick={() => setPipe(p.id)}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        )}
+        {peutEcrire && (
           <button className="cta" onClick={() => setCreation(true)}>
-            Nouvelle affaire
+            {pipe === 'vente' ? 'Nouvelle affaire' : 'Nouveau dossier'}
           </button>
-        </div>
-      )}
+        )}
+      </div>
       <div className="board-wrap">
         <div className="board" style={{ ['--n' as string]: etapes.donnees.length }}>
           {etapes.donnees.map((etape) => {
@@ -62,8 +79,9 @@ export function Pipe() {
       </div>
       {creation && (
         <Formulaire
-          titre="Nouvelle affaire"
+          titre={pipe === 'vente' ? 'Nouvelle affaire' : 'Nouveau dossier'}
           chemin="/affaires"
+          initial={{ pipeline: pipe }}
           champs={[
             { nom: 'titre', label: 'Titre', requis: true },
             {

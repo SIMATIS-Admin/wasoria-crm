@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { appel, ErreurApi } from '../api';
-import type { Etape } from '../types';
+import type { Etape, Pipeline } from '../types';
 import { useApi } from '../useApi';
 import { useRole } from '../role';
 import { Chargement, Panel } from '../ui';
@@ -9,7 +9,9 @@ type Suppression = { etape: Etape; affaires: number };
 
 export function Etapes() {
   const { estAdmin } = useRole();
-  const liste = useApi<Etape[]>('/etapes');
+  const [pipe, setPipe] = useState('vente');
+  const pipelines = useApi<Pipeline[]>('/pipelines');
+  const liste = useApi<Etape[]>(`/etapes?pipeline=${pipe}`);
   const [erreur, setErreur] = useState<string | null>(null);
   const [suppression, setSuppression] = useState<Suppression | null>(null);
   if (!estAdmin) return <p className="muted">Réservé aux administrateurs.</p>;
@@ -35,7 +37,7 @@ export function Etapes() {
     const j = i + sens;
     if (j < 0 || j >= ids.length) return;
     [ids[i], ids[j]] = [ids[j]!, ids[i]!];
-    void agir(() => appel('PUT', '/etapes/ordre', { ids }));
+    void agir(() => appel('PUT', '/etapes/ordre', { ids, pipeline: pipe }));
   };
 
   async function supprimer(e: Etape, vers?: string) {
@@ -66,6 +68,7 @@ export function Etapes() {
     void agir(async () => {
       await appel('POST', '/etapes', {
         label: label.trim(),
+        pipeline: pipe,
         ...(typeof prob === 'string' && prob !== '' ? { probabilite: Number(prob) } : {}),
       });
       form.reset();
@@ -79,6 +82,15 @@ export function Etapes() {
         étape garde son identifiant quand on la renomme.
       </p>
       {erreur && <div className="alert">{erreur}</div>}
+      {pipelines.donnees && pipelines.donnees.length > 1 && (
+        <div className="seg" role="group" aria-label="Pipe">
+          {pipelines.donnees.map((p) => (
+            <button key={p.id} className={pipe === p.id ? 'on' : ''} onClick={() => setPipe(p.id)}>
+              {p.label}
+            </button>
+          ))}
+        </div>
+      )}
       <Panel titre="Étapes du pipe">
         <div className="list">
           {etapes.map((e, i) => (

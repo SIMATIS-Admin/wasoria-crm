@@ -21,6 +21,7 @@ export function registerIndicateurs(app: FastifyInstance, db: Db): void {
           etapesDates: opportunites.etapesDates,
           clos: opportunites.clos,
           closLe: opportunites.closLe,
+          pipeline: opportunites.pipelineId,
         })
         .from(opportunites),
     ]);

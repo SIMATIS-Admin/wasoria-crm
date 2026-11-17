@@ -19,23 +19,27 @@ describe('données de démonstration', () => {
     const { rows } = await base.pool.query<{ n: string }>(
       "select count(*) n from opportunites where source = 'demo'",
     );
-    expect(Number(rows[0]!.n)).toBe(9);
+    expect(Number(rows[0]!.n)).toBe(11);
   });
 });
 
 describe('historique de démonstration', () => {
-  it('date chaque étape franchie et la clôture, dans l’ordre', async () => {
+  it('date chaque étape franchie dans l’ordre de son pipe, et la clôture', async () => {
     const { rows } = await base.pool.query<{
-      titre: string;
+      pipeline_id: string;
       etape: string;
       dates: Record<string, string>;
       clos: string | null;
       clos_le: Date | null;
     }>(
-      "select titre, etape, etapes_dates as dates, clos, clos_le from opportunites where source = 'demo' order by titre",
+      "select pipeline_id, etape, etapes_dates as dates, clos, clos_le from opportunites where source = 'demo' order by titre",
     );
-    const ordre = ['detection', 'prospection', 'qualification', 'proposition', 'negociation'];
+    const ordres: Record<string, string[]> = {
+      vente: ['detection', 'prospection', 'qualification', 'proposition', 'negociation'],
+      'apres-vente': ['installation', 'mise-en-service', 'suivi-mco', 'renouvellement'],
+    };
     for (const r of rows) {
+      const ordre = ordres[r.pipeline_id]!;
       const attendues = ordre.slice(0, ordre.indexOf(r.etape) + 1);
       expect(Object.keys(r.dates).sort()).toEqual([...attendues].sort());
       const temps = attendues.map((e) => new Date(r.dates[e]!).getTime());
@@ -45,8 +49,18 @@ describe('historique de démonstration', () => {
     }
   });
 
+  it('les dossiers après-vente viennent d’une vente gagnée ou sont autonomes', async () => {
+    const { rows } = await base.pool.query<{ titre: string; origine: string | null }>(
+      "select a.titre, o.titre as origine from opportunites a left join opportunites o on o.id = a.origine_affaire_id where a.pipeline_id = 'apres-vente' order by a.titre",
+    );
+    expect(rows).toEqual([
+      { titre: 'Démo A · contrat signé · après-vente', origine: 'Démo A · contrat signé' },
+      { titre: 'Démo C · second site · après-vente', origine: null },
+    ]);
+  });
+
   it('se rejoue sans changer ce qui existe déjà : mêmes étapes datées', async () => {
     const db = createDb(base.pool);
-    expect(await historiqueDemo(db)).toBe(9);
+    expect(await historiqueDemo(db)).toBe(11);
   });
 });

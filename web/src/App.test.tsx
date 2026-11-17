@@ -46,7 +46,7 @@ describe('App', () => {
         connecte = true;
         return json({ utilisateur: { id: '1', identifiant: 'marc', nom: 'Marc', role: 'admin' } });
       }
-      if (url === '/api/etapes') {
+      if (url.startsWith('/api/etapes')) {
         return json([
           { id: 'detection', label: 'Détection', ordre: 1, probabilite: 10 },
           { id: 'proposition', label: 'Proposition', ordre: 2, probabilite: 60 },
@@ -106,7 +106,7 @@ describe('App', () => {
       if (url === '/api/moi') {
         return json({ utilisateur: { id: '1', identifiant: 'x', nom: 'Personne', role } });
       }
-      if (url === '/api/etapes')
+      if (url.startsWith('/api/etapes'))
         return json([{ id: 'detection', label: 'Détection', ordre: 1, probabilite: 10 }]);
       return json([]);
     });
