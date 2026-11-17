@@ -9,7 +9,7 @@ export class ErreurApi extends Error {
 }
 
 export async function appel<T>(
-  methode: 'GET' | 'POST' | 'PATCH' | 'DELETE',
+  methode: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE',
   chemin: string,
   corps?: object,
 ): Promise<T> {

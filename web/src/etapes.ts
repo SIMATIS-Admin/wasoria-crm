@@ -1,12 +1,9 @@
-export const ETAPES = [
-  { id: 'detection', label: 'Détection' },
-  { id: 'prospection', label: 'Prospection' },
-  { id: 'qualification', label: 'Qualification' },
-  { id: 'proposition', label: 'Proposition' },
-  { id: 'negociation', label: 'Négociation' },
-] as const;
+import type { Etape } from './types';
 
-export const libelleEtape = (id: string) => ETAPES.find((e) => e.id === id)?.label ?? id;
+// Les étapes viennent du serveur (modifiables dans l'écran Étapes) ; une étape retirée entre-temps
+// s'affiche par son identifiant.
+export const libelleEtape = (id: string, etapes: Etape[]) =>
+  etapes.find((e) => e.id === id)?.label ?? id;
 
 export const TYPES_TACHE = [
   { id: 'tache', label: 'Tâche' },

@@ -13,7 +13,8 @@ import {
 } from '../db/schema.js';
 import { registerEchange } from '../echange/routes.js';
 import { registerLiens } from '../echange/liens.js';
-import { enregistrer } from './ressource.js';
+import { etapeExiste, registerEtapes } from './etapes.js';
+import { enregistrer, ErreurRequete } from './ressource.js';
 import { creation, idSchema, miseAJour, TYPES_TACHE } from './schemas.js';
 
 const bool = z
@@ -36,6 +37,7 @@ export function registerRoutes(app: FastifyInstance, db: Db, odoo?: ServiceOdoo)
         details: error.issues.map((i) => `${i.path.join('.') || 'corps'} : ${i.message}`),
       });
     }
+    if (error instanceof ErreurRequete) return reply.code(400).send({ erreur: error.message });
     // Clé étrangère (fiche encore liée) ou doublon : un conflit, pas une panne.
     // Drizzle enveloppe l'erreur Postgres : le code est sur l'erreur ou sur sa cause.
     const code =
@@ -93,6 +95,11 @@ export function registerRoutes(app: FastifyInstance, db: Db, odoo?: ServiceOdoo)
       f.ouvertes ? isNull(opportunites.clos) : undefined,
     ],
     ordre: [desc(opportunites.updatedAt)],
+    verifier: async (c) => {
+      if (typeof c.etape === 'string' && !(await etapeExiste(db, c.etape))) {
+        throw new ErreurRequete(`Étape inconnue : ${c.etape}`);
+      }
+    },
     avant: (corps, existant) => {
       const etape = corps.etape;
       if (typeof etape !== 'string' || etape === existant?.etape) return corps;
@@ -202,6 +209,7 @@ export function registerRoutes(app: FastifyInstance, db: Db, odoo?: ServiceOdoo)
     avant: (corps) => convertir(corps, ['at']),
   });
 
+  registerEtapes(app, db);
   registerLiens(app, db);
   registerEchange(app, db);
 

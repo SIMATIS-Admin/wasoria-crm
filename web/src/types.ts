@@ -62,3 +62,9 @@ export type Activite = {
   resume: string | null;
   at: string;
 };
+export type Etape = {
+  id: string;
+  label: string;
+  ordre: number;
+  probabilite: number;
+};

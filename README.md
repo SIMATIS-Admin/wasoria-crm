@@ -89,13 +89,13 @@ Un lien modifié fait remonter la fiche qu'il décrit (`modifie_le`). Les rendez
 | `record.archive`                                | `DELETE` de la fiche, journalisé dans `suppressions`                                                                                                                        |
 | `record.merge`                                  | pas encore                                                                                                                                                                  |
 
-Les écritures de l'OS vers ce CRM restent soumises, côté OS, au double verrou habituel (`REAL_WRITES` et interrupteur de l'instance). Le connecteur lui-même vit dans le dépôt de l'OS.
+Les écritures de l'OS vers ce CRM restent soumises, côté OS, au double verrou habituel (`REAL_WRITES` et interrupteur de l'instance). Le connecteur lui-même vit dans le dépôt de l'OS, sous le nom générique `crm-os` (en lecture seule pour l'instant) : `connexion:set --kind crm --fournisseur crm-os`, puis `CRM_OS_URL` et `CRM_OS_TOKEN` (le `API_TOKEN` d'ici) dans le fichier de secrets de l'instance. Depuis le conteneur de l'OS, ce CRM local se joint par `http://host.docker.internal:4400`.
 
 ## Feuille de route
 
 1. Socle : schéma des objets, migrations, API de santé (fait).
 2. API CRM : entreprises, contacts, affaires, tâches, rendez-vous (fait). Reste : liens affaire ↔ contacts/entreprises, emails multiples, fusion.
-3. Interface : accueil, pipe, fiche affaire, comptes, tâches, rendez-vous (fait). Reste : devis (avec Odoo).
+3. Interface : accueil, pipe, fiche affaire, comptes, tâches, rendez-vous, étapes modifiables (fait). Reste : devis (avec Odoo).
 4. Connecteur Odoo : comptes et contacts en lecture (fait). Reste : affaires, tâches, écriture sous double verrou, devis.
 5. Échange avec l'OS : API d'échange pour le connecteur de l'OS (fait). Reste : le connecteur côté OS, puis éventuellement un pair sur le relais d'agents (`os-agents-relay`, profil `crm/1`).
 6. Serveur MCP.

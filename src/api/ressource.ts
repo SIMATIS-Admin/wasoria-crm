@@ -9,6 +9,9 @@ import { idSchema, pagination } from './schemas.js';
 
 type Ligne = Record<string, unknown>;
 
+// Une requête refusée pour une raison métier : répond 400 avec le message.
+export class ErreurRequete extends Error {}
+
 type Cible = PgTable & { id: PgColumn };
 
 export type Definition = {
@@ -24,6 +27,8 @@ export type Definition = {
   ordre: SQL[];
   // Transforme le corps reçu en valeurs prêtes pour la base ; `existant` = fiche avant mise à jour.
   avant?: (corps: Ligne, existant?: Ligne) => Ligne;
+  // Contrôle asynchrone du corps reçu (ex. référence à une étape) ; lève ErreurRequete.
+  verifier?: (corps: Ligne) => Promise<void>;
 };
 
 const introuvable = { erreur: 'Fiche introuvable' };
@@ -58,6 +63,7 @@ export function enregistrer(app: FastifyInstance, db: Db, d: Definition): void {
 
   app.post(d.chemin, async (request, reply) => {
     const corps = d.creation.parse(request.body);
+    await d.verifier?.(corps);
     const [fiche] = await db
       .insert(table)
       .values(avant(corps) as never)
@@ -68,6 +74,7 @@ export function enregistrer(app: FastifyInstance, db: Db, d: Definition): void {
   app.patch(`${d.chemin}/:id`, async (request, reply) => {
     const { id } = z.object({ id: idSchema }).parse(request.params);
     const corps = d.miseAJour.parse(request.body);
+    await d.verifier?.(corps);
     const [existant] = await db.select().from(table).where(eq(table.id, id));
     if (!existant) return reply.code(404).send(introuvable);
     const valeurs = avant(corps, existant);

@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { appel } from '../api';
-import { ETAPES, TYPES_TACHE, libelleType } from '../etapes';
+import { TYPES_TACHE, libelleType } from '../etapes';
 import { CRITERES, eur, enRetard, jour, niveau, score } from '../format';
 import type {
   Activite,
   Affaire as TAffaire,
   Contact,
   Entreprise,
+  Etape,
   Qualification,
   Tache,
 } from '../types';
@@ -23,14 +24,15 @@ export function Affaire({ id }: { id: string }) {
   const contacts = useApi<Contact[]>(
     affaire.donnees?.entrepriseId ? `/contacts?entrepriseId=${affaire.donnees.entrepriseId}` : null,
   );
+  const etapes = useApi<Etape[]>('/etapes');
   const taches = useApi<Tache[]>(`/taches?opportuniteId=${id}&limite=100`);
   const activites = useApi<Activite[]>(`/activites?opportuniteId=${id}`);
   const [onglet, setOnglet] = useState<Onglet>('suivi');
   const [creation, setCreation] = useState(false);
 
   const a = affaire.donnees;
-  if (!a) return <Chargement erreur={affaire.erreur} />;
-  const indice = ETAPES.findIndex((e) => e.id === a.etape);
+  if (!a || !etapes.donnees) return <Chargement erreur={affaire.erreur ?? etapes.erreur} />;
+  const indice = etapes.donnees.findIndex((e) => e.id === a.etape);
   const n = score(a.qualification);
   const niv = niveau(n);
 
@@ -77,7 +79,7 @@ export function Affaire({ id }: { id: string }) {
         )}
       </div>
       <div className="stepper">
-        {ETAPES.map((e, i) => (
+        {etapes.donnees.map((e, i) => (
           <button
             key={e.id}
             className={`step ${i < indice ? 'done' : i === indice ? 'cur' : ''}`}

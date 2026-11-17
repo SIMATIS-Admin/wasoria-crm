@@ -46,6 +46,12 @@ describe('App', () => {
         connecte = true;
         return json({ utilisateur: { id: '1', identifiant: 'marc', nom: 'Marc' } });
       }
+      if (url === '/api/etapes') {
+        return json([
+          { id: 'detection', label: 'Détection', ordre: 1, probabilite: 10 },
+          { id: 'proposition', label: 'Proposition', ordre: 2, probabilite: 60 },
+        ]);
+      }
       if (url.startsWith('/api/affaires')) {
         return json([
           {
@@ -78,6 +84,9 @@ describe('App', () => {
       motDePasse: 'un-mot-de-passe-solide',
     });
     expect(screen.getByRole('button', { name: 'Se déconnecter' })).toBeTruthy();
+    // une colonne par étape du serveur
+    expect(screen.getByText('Détection')).toBeTruthy();
+    expect(screen.getAllByText('Proposition').length).toBeGreaterThan(0);
   });
 
   it('revient à la connexion quand la session expire', async () => {

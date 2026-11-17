@@ -1,16 +1,16 @@
 import { useState } from 'react';
-import { ETAPES } from '../etapes';
 import { eur, enRetard, jour, montantOuvert, niveau, parEtape, score } from '../format';
-import type { Affaire, Entreprise } from '../types';
+import type { Affaire, Entreprise, Etape } from '../types';
 import { useApi } from '../useApi';
 import { Chargement, Formulaire, Pill } from '../ui';
 
 export function Pipe() {
   const affaires = useApi<Affaire[]>('/affaires?ouvertes=1&limite=200');
   const entreprises = useApi<Entreprise[]>('/entreprises?limite=200');
+  const etapes = useApi<Etape[]>('/etapes');
   const [creation, setCreation] = useState(false);
-  if (!affaires.donnees || !entreprises.donnees) {
-    return <Chargement erreur={affaires.erreur ?? entreprises.erreur} />;
+  if (!affaires.donnees || !entreprises.donnees || !etapes.donnees) {
+    return <Chargement erreur={affaires.erreur ?? entreprises.erreur ?? etapes.erreur} />;
   }
   const nom = (id: string | null) => entreprises.donnees?.find((e) => e.id === id)?.nom ?? '';
 
@@ -22,8 +22,8 @@ export function Pipe() {
         </button>
       </div>
       <div className="board-wrap">
-        <div className="board">
-          {ETAPES.map((etape) => {
+        <div className="board" style={{ ['--n' as string]: etapes.donnees.length }}>
+          {etapes.donnees.map((etape) => {
             const liste = parEtape(affaires.donnees ?? [], etape.id);
             return (
               <div className="col" key={etape.id}>
@@ -67,7 +67,7 @@ export function Pipe() {
               label: 'Étape',
               type: 'select',
               requis: true,
-              options: ETAPES.map((e) => ({ id: e.id, label: e.label })),
+              options: etapes.donnees.map((e) => ({ id: e.id, label: e.label })),
             },
             {
               nom: 'entrepriseId',
