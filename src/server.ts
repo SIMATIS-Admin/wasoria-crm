@@ -1,5 +1,6 @@
 import pg from 'pg';
 import { buildApp } from './app.js';
+import { createDb } from './db/index.js';
 import { loadConfig, type Config } from './config.js';
 import { runMigrations } from './migrate.js';
 
@@ -15,6 +16,8 @@ const pool = new pg.Pool({ connectionString: config.databaseUrl });
 await runMigrations(pool);
 
 const app = buildApp({
+  db: createDb(pool),
+  apiToken: config.apiToken,
   pingDb: async () => {
     await pool.query('select 1');
   },
