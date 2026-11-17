@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { eur } from '../format';
 import { libelleEtape } from '../etapes';
-import type { Affaire, Contact, Entreprise } from '../types';
+import type { Affaire, Contact, Entreprise, Etape } from '../types';
 import { useApi } from '../useApi';
 import { Chargement, Formulaire, Panel } from '../ui';
 
@@ -11,6 +11,7 @@ export function Comptes() {
   const [dialogue, setDialogue] = useState<'entreprise' | 'contact' | null>(null);
   const chemin = `/entreprises?limite=200${recherche ? `&q=${encodeURIComponent(recherche)}` : ''}`;
   const liste = useApi<Entreprise[]>(chemin);
+  const etapes = useApi<Etape[]>('/etapes');
   const actif = choix ?? liste.donnees?.[0]?.id ?? null;
   const contacts = useApi<Contact[]>(actif ? `/contacts?entrepriseId=${actif}` : null);
   const affaires = useApi<Affaire[]>(actif ? `/affaires?entrepriseId=${actif}` : null);
@@ -82,7 +83,7 @@ export function Comptes() {
                       {a.titre}
                     </a>{' '}
                     <span className="muted small">
-                      · {libelleEtape(a.etape)} · {eur(a.montant)}
+                      · {libelleEtape(a.etape, etapes.donnees ?? [])} · {eur(a.montant)}
                     </span>
                   </div>
                 ))}

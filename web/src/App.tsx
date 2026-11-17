@@ -3,6 +3,7 @@ import { appel, ErreurApi, lire } from './api';
 import { Accueil } from './views/Accueil';
 import { Affaire } from './views/Affaire';
 import { Comptes } from './views/Comptes';
+import { Etapes } from './views/Etapes';
 import { Pipe } from './views/Pipe';
 import { RendezVous } from './views/RendezVous';
 import { Taches } from './views/Taches';
@@ -13,6 +14,7 @@ const VUES = [
   { id: 'comptes', label: 'Comptes' },
   { id: 'taches', label: 'Tâches' },
   { id: 'rdv', label: 'Rendez-vous' },
+  { id: 'etapes', label: 'Étapes' },
 ];
 
 const TITRES: Record<string, [string, string]> = {
@@ -22,6 +24,7 @@ const TITRES: Record<string, [string, string]> = {
   comptes: ['Clients et prospects', 'Comptes'],
   taches: ['À faire', 'Tâches'],
   rdv: ['Agenda', 'Rendez-vous'],
+  etapes: ['Réglages', 'Étapes du pipe'],
 };
 
 // Route par ancre (#pipe, #affaire/<id>) : pas de serveur de routes à configurer.
@@ -217,6 +220,7 @@ export function App() {
           {actuelle === 'comptes' && <Comptes />}
           {actuelle === 'taches' && <Taches />}
           {actuelle === 'rdv' && <RendezVous />}
+          {actuelle === 'etapes' && <Etapes />}
         </section>
       </main>
     </>
