@@ -1,5 +1,5 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import { lireJeton, poserJeton } from './api';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { appel, ErreurApi, lire } from './api';
 import { Accueil } from './views/Accueil';
 import { Affaire } from './views/Affaire';
 import { Comptes } from './views/Comptes';
@@ -30,28 +30,92 @@ export const lireRoute = (hash: string) => {
   return { vue: vue || 'accueil', id };
 };
 
-function Connexion({ onJeton }: { onJeton: () => void }) {
-  function envoyer(e: FormEvent<HTMLFormElement>) {
+type Moi = { utilisateur: { id: string; identifiant: string; nom: string } };
+
+const texte = (d: FormData, nom: string) => {
+  const v = d.get(nom);
+  return typeof v === 'string' ? v : '';
+};
+
+// Connexion, ou création du premier compte tant qu'il n'y en a aucun (elle demande alors le jeton
+// du serveur, celui de .env, pour prouver qu'on a la main sur l'installation).
+function Connexion({
+  installation,
+  onConnecte,
+}: {
+  installation: boolean;
+  onConnecte: () => void;
+}) {
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [envoi, setEnvoi] = useState(false);
+
+  async function envoyer(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const saisi = new FormData(e.currentTarget).get('jeton');
-    const jeton = typeof saisi === 'string' ? saisi.trim() : '';
-    if (!jeton) return;
-    poserJeton(jeton);
-    onJeton();
+    const d = new FormData(e.currentTarget);
+    setEnvoi(true);
+    setErreur(null);
+    try {
+      if (installation) {
+        await appel('POST', '/installation', {
+          jeton: texte(d, 'jeton'),
+          identifiant: texte(d, 'identifiant'),
+          nom: texte(d, 'nom'),
+          motDePasse: texte(d, 'motDePasse'),
+        });
+      } else {
+        await appel('POST', '/connexion', {
+          identifiant: texte(d, 'identifiant'),
+          motDePasse: texte(d, 'motDePasse'),
+        });
+      }
+      onConnecte();
+    } catch (err) {
+      setErreur(err instanceof ErreurApi ? err.message : 'Connexion impossible');
+      setEnvoi(false);
+    }
   }
+
   return (
     <main className="wrap connexion">
-      <form className="panel dialogue" onSubmit={envoyer}>
+      <form className="panel dialogue" onSubmit={(e) => void envoyer(e)}>
         <div className="panel-h">
-          <h2>CRM Wasoria</h2>
+          <h2>{installation ? 'Créer le premier compte' : 'CRM Wasoria'}</h2>
         </div>
         <div className="panel-b form">
+          {installation && (
+            <>
+              <p className="muted small">
+                Aucun compte n’existe encore. Saisissez le jeton d’installation (la ligne API_TOKEN
+                du fichier .env du serveur) et choisissez vos identifiants.
+              </p>
+              <label className="champ">
+                <span className="lbl">Jeton d’installation</span>
+                <input name="jeton" type="password" autoComplete="off" required />
+              </label>
+              <label className="champ">
+                <span className="lbl">Nom affiché</span>
+                <input name="nom" autoComplete="name" required />
+              </label>
+            </>
+          )}
           <label className="champ">
-            <span className="lbl">Jeton d’accès</span>
-            <input name="jeton" type="password" autoComplete="off" required />
+            <span className="lbl">Identifiant</span>
+            <input name="identifiant" autoComplete="username" required />
           </label>
-          <button className="cta" type="submit">
-            Entrer
+          <label className="champ">
+            <span className="lbl">Mot de passe</span>
+            <input
+              name="motDePasse"
+              type="password"
+              autoComplete={installation ? 'new-password' : 'current-password'}
+              minLength={installation ? 12 : undefined}
+              required
+            />
+          </label>
+          {installation && <span className="muted small">12 caractères minimum.</span>}
+          {erreur && <div className="alert">{erreur}</div>}
+          <button className="cta" type="submit" disabled={envoi}>
+            {installation ? 'Créer le compte' : 'Se connecter'}
           </button>
         </div>
       </form>
@@ -59,25 +123,50 @@ function Connexion({ onJeton }: { onJeton: () => void }) {
   );
 }
 
+type Statut = 'chargement' | 'connexion' | 'installation' | 'connecte';
+
 export function App() {
-  const [connecte, setConnecte] = useState(() => lireJeton() !== null);
+  const [statut, setStatut] = useState<Statut>('chargement');
+  const [nom, setNom] = useState('');
   const [hash, setHash] = useState(window.location.hash);
 
+  // Qui est connecté ? Sinon : faut-il créer le premier compte, ou se connecter ?
+  const verifier = useCallback(async () => {
+    try {
+      const moi = await lire<Moi>('/moi');
+      setNom(moi.utilisateur.nom);
+      setStatut('connecte');
+    } catch {
+      try {
+        const etat = await lire<{ installe: boolean }>('/etat');
+        setStatut(etat.installe ? 'connexion' : 'installation');
+      } catch {
+        setStatut('connexion');
+      }
+    }
+  }, []);
+
   useEffect(() => {
+    void verifier();
     const surHash = () => {
       setHash(window.location.hash);
       window.scrollTo(0, 0);
     };
-    const surRefus = () => setConnecte(false);
+    const surExpiration = () => setStatut('connexion');
     window.addEventListener('hashchange', surHash);
-    window.addEventListener('jeton-refuse', surRefus);
+    window.addEventListener('session-expiree', surExpiration);
     return () => {
       window.removeEventListener('hashchange', surHash);
-      window.removeEventListener('jeton-refuse', surRefus);
+      window.removeEventListener('session-expiree', surExpiration);
     };
-  }, []);
+  }, [verifier]);
 
-  if (!connecte) return <Connexion onJeton={() => setConnecte(true)} />;
+  if (statut === 'chargement') return <p className="muted wrap">Chargement…</p>;
+  if (statut !== 'connecte') {
+    return (
+      <Connexion installation={statut === 'installation'} onConnecte={() => void verifier()} />
+    );
+  }
 
   const { vue, id } = lireRoute(hash);
   const actuelle = TITRES[vue] ? vue : 'accueil';
@@ -104,14 +193,14 @@ export function App() {
                 </a>
               ))}
             </div>
+            <span className="muted small">{nom}</span>
             <button
               className="ghost"
               onClick={() => {
-                poserJeton(null);
-                setConnecte(false);
+                void appel('POST', '/deconnexion').finally(() => setStatut('connexion'));
               }}
             >
-              Quitter
+              Se déconnecter
             </button>
           </nav>
         </div>

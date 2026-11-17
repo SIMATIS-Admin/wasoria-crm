@@ -6,6 +6,7 @@ describe('loadConfig', () => {
     expect(loadConfig({ DATABASE_URL: 'postgres://x', API_TOKEN: 'a'.repeat(24) })).toEqual({
       databaseUrl: 'postgres://x',
       apiToken: 'a'.repeat(24),
+      trustProxy: false,
       port: 4400,
       realWrites: false,
     });

@@ -1,21 +1,3 @@
-const CLE = 'wasoria-crm-jeton';
-
-export const lireJeton = (): string | null => {
-  try {
-    return sessionStorage.getItem(CLE);
-  } catch {
-    return null;
-  }
-};
-export const poserJeton = (jeton: string | null) => {
-  try {
-    if (jeton) sessionStorage.setItem(CLE, jeton);
-    else sessionStorage.removeItem(CLE);
-  } catch {
-    // stockage indisponible : le jeton ne survit pas au rechargement, rien de plus
-  }
-};
-
 export class ErreurApi extends Error {
   constructor(
     readonly statut: number,
@@ -33,15 +15,12 @@ export async function appel<T>(
 ): Promise<T> {
   const reponse = await fetch(`/api${chemin}`, {
     method: methode,
-    headers: {
-      authorization: `Bearer ${lireJeton() ?? ''}`,
-      ...(corps ? { 'content-type': 'application/json' } : {}),
-    },
+    // Le cookie de session part tout seul (même adresse) ; il n'est pas lisible par la page.
+    headers: corps ? { 'content-type': 'application/json' } : {},
     body: corps ? JSON.stringify(corps) : undefined,
   });
-  if (reponse.status === 401) {
-    poserJeton(null);
-    window.dispatchEvent(new Event('jeton-refuse'));
+  if (reponse.status === 401 && chemin !== '/connexion' && chemin !== '/installation') {
+    window.dispatchEvent(new Event('session-expiree'));
   }
   if (!reponse.ok) {
     const json = (await reponse.json().catch(() => ({}))) as {

@@ -309,3 +309,35 @@ export const suppressions = pgTable(
   },
   (t) => [index('suppressions_le_idx').on(t.supprimeLe)],
 );
+
+// Comptes qui se connectent à l'interface. Le mot de passe n'est jamais stocké : seulement son
+// empreinte (scrypt, avec sel). Tous les comptes ont les mêmes droits pour l'instant.
+export const utilisateurs = pgTable(
+  'utilisateurs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    identifiant: text('identifiant').notNull(),
+    nom: text('nom').notNull(),
+    motDePasse: text('mot_de_passe').notNull(),
+    actif: boolean('actif').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    derniereConnexion: timestamp('derniere_connexion', { withTimezone: true }),
+  },
+  (t) => [uniqueIndex('utilisateurs_identifiant_idx').on(t.identifiant)],
+);
+
+// Une session par connexion. On ne garde que l'empreinte (SHA-256) du jeton du cookie : une base
+// lue par un tiers ne permet pas de se connecter.
+export const sessions = pgTable(
+  'sessions',
+  {
+    id: text('id').primaryKey(),
+    utilisateurId: uuid('utilisateur_id')
+      .notNull()
+      .references(() => utilisateurs.id, { onDelete: 'cascade' }),
+    creeLe: timestamp('cree_le', { withTimezone: true }).notNull().defaultNow(),
+    vuLe: timestamp('vu_le', { withTimezone: true }).notNull().defaultNow(),
+    expireLe: timestamp('expire_le', { withTimezone: true }).notNull(),
+  },
+  (t) => [index('sessions_utilisateur_idx').on(t.utilisateurId)],
+);

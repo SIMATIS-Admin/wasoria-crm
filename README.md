@@ -12,7 +12,7 @@ Prérequis : Node 24 et Docker Desktop lancé.
 2. `docker compose up -d` : démarre Postgres.
 3. `npm ci`, puis `npm run demo:seed` : charge des données **fictives** (uniquement dans une base vide).
 4. `npm run build`, puis `npm start`.
-5. Ouvrir http://localhost:4400 et saisir `API_TOKEN` comme jeton d'accès.
+5. Ouvrir http://localhost:4400. À la toute première visite, la page propose de **créer le premier compte** : saisir `API_TOKEN` (ligne du fichier `.env`, c'est la clé d'installation), un nom, un identifiant et un mot de passe de 12 caractères au moins. Ensuite, on se connecte par identifiant et mot de passe.
 
 Pour développer l'interface avec rechargement à chaud : `npm run dev` (API) et, dans un autre terminal, `npm run dev:web`, puis http://localhost:5173.
 
@@ -28,7 +28,15 @@ Prérequis : Node 24, Docker (tests), un Postgres.
 
 ## API
 
-L'API vit sous `/api` ; toutes ses routes exigent `Authorization: Bearer <API_TOKEN>`.
+L'API vit sous `/api`. Ses routes exigent soit une session ouverte par l'interface (cookie), soit `Authorization: Bearer <API_TOKEN>` pour les intégrations (connecteur de l'OS, scripts).
+
+## Comptes et connexion
+
+- Connexion par identifiant et mot de passe. Le mot de passe n'est jamais stocké, seulement son empreinte (scrypt, avec sel) ; la session est un cookie `HttpOnly`, `SameSite=Strict` (et `Secure` en https), valable 7 jours d'activité ; la base ne garde que l'empreinte du jeton de session.
+- Après 5 échecs sur un même compte depuis une même adresse, la connexion est bloquée 15 minutes. Un identifiant inconnu et un mauvais mot de passe reçoivent la même réponse.
+- Gérer les comptes en ligne de commande (le mot de passe se saisit au clavier, rien ne s'affiche) : `npm run utilisateur -- creer <identifiant> --nom "Nom"`, `mot-de-passe <identifiant>` (ferme ses sessions), `desactiver <identifiant>`, `activer <identifiant>`, `lister`.
+- Derrière un proxy https, mettre `TRUST_PROXY=on` pour le cookie `Secure` et l'adresse réelle du client.
+- Tous les comptes ont les mêmes droits pour l'instant (pas de rôles).
 
 | Ressource                   | Routes                                                        | Particularités                                                                                                   |
 | --------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
