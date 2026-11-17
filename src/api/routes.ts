@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, gte, ilike, isNull, lte } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { ZodError, z } from 'zod';
+import type { ServiceOdoo } from '../connecteurs/odoo/service.js';
 import type { Db } from '../db/index.js';
 import {
   activites,
@@ -25,7 +26,7 @@ const convertir = (c: Record<string, unknown>, cles: string[]) =>
 // Comme dans l'OS, le canal d'une tâche se déduit de son type.
 const canalDe = (type: string) => (type === 'appel' || type === 'email' ? type : 'tache');
 
-export function registerRoutes(app: FastifyInstance, db: Db): void {
+export function registerRoutes(app: FastifyInstance, db: Db, odoo?: ServiceOdoo): void {
   app.setErrorHandler((error, _request, reply) => {
     if (error instanceof ZodError) {
       return reply.code(400).send({
@@ -195,5 +196,17 @@ export function registerRoutes(app: FastifyInstance, db: Db): void {
       )
       .orderBy(desc(activites.at))
       .limit(q.limite);
+  });
+
+  // Synchronisation avec Odoo : lecture seule, une à la fois. Absente tant qu'Odoo n'est pas configuré.
+  app.post('/odoo/synchro', async (request, reply) => {
+    if (!odoo) return reply.code(404).send({ erreur: 'Odoo n’est pas configuré' });
+    const { complet } = z.object({ complet: z.boolean().optional() }).parse(request.body ?? {});
+    try {
+      return await odoo.synchroniser({ complet });
+    } catch (erreur) {
+      const message = erreur instanceof Error ? erreur.message : 'Erreur';
+      return reply.code(message.includes('déjà en cours') ? 409 : 502).send({ erreur: message });
+    }
   });
 }

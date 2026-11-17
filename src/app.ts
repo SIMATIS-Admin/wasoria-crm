@@ -3,6 +3,7 @@ import fastifyStatic from '@fastify/static';
 import { existsSync } from 'node:fs';
 import { exigerJeton } from './api/auth.js';
 import { registerRoutes } from './api/routes.js';
+import type { ServiceOdoo } from './connecteurs/odoo/service.js';
 import type { Db } from './db/index.js';
 
 export type Deps = {
@@ -13,9 +14,11 @@ export type Deps = {
   webDir?: string;
   db: Db;
   apiToken: string;
+  // Présent seulement quand Odoo est configuré.
+  odoo?: ServiceOdoo;
 };
 
-export function buildApp({ pingDb, version, db, apiToken, webDir }: Deps): FastifyInstance {
+export function buildApp({ pingDb, version, db, apiToken, webDir, odoo }: Deps): FastifyInstance {
   const app = Fastify({ logger: false });
   app.get('/health', async (_request, reply) => {
     const databaseOk = await pingDb().then(
@@ -32,7 +35,7 @@ export function buildApp({ pingDb, version, db, apiToken, webDir }: Deps): Fasti
   void app.register(
     (api, _options, done) => {
       exigerJeton(api, apiToken);
-      registerRoutes(api, db);
+      registerRoutes(api, db, odoo);
       done();
     },
     { prefix: '/api' },
