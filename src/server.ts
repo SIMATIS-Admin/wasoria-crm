@@ -16,6 +16,7 @@ const pool = new pg.Pool({ connectionString: config.databaseUrl });
 await runMigrations(pool);
 
 const app = buildApp({
+  webDir: new URL('./web', import.meta.url).pathname,
   db: createDb(pool),
   apiToken: config.apiToken,
   pingDb: async () => {
