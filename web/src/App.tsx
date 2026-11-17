@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { Logo } from './Logo';
 import { appel, ErreurApi, lire } from './api';
 import { Accueil } from './views/Accueil';
 import { Affaire } from './views/Affaire';
@@ -85,7 +86,11 @@ function Connexion({
     <main className="wrap connexion">
       <form className="panel dialogue" onSubmit={(e) => void envoyer(e)}>
         <div className="panel-h">
-          <h2>{installation ? 'Créer le premier compte' : 'CRM Wasoria'}</h2>
+          <div className="titre-connexion">
+            <Logo />
+            <span className="os">OS</span>
+          </div>
+          {installation && <h2>Créer le premier compte</h2>}
         </div>
         <div className="panel-b form">
           {installation && (
@@ -183,8 +188,9 @@ export function App() {
       <header className="navbar">
         <div className="wrap">
           <nav className="pillnav" aria-label="Navigation">
-            <a className="logo" href="#accueil">
-              WASORIA
+            <a className="logo" href="#accueil" aria-label="WASORIA OS, accueil">
+              <Logo />
+              <span className="os">OS</span>
             </a>
             <div className="links">
               {VUES.map((v) => (
