@@ -36,6 +36,13 @@
       "when": 1794908220736,
       "tag": "0004_etapes_par_defaut",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794909324438,
+      "tag": "0005_utilisateurs_sessions",
+      "breakpoints": true
     }
   ]
 }

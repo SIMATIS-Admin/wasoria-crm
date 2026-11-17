@@ -3,12 +3,8 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App, lireRoute } from './App';
 
-const reponse = (corps: unknown) =>
-  Promise.resolve(new Response(JSON.stringify(corps), { status: 200 }));
-
 beforeEach(() => {
   window.scrollTo = () => undefined;
-  sessionStorage.clear();
   window.location.hash = '';
 });
 afterEach(() => {
@@ -24,11 +20,34 @@ describe('routes', () => {
   });
 });
 
+const json = (corps: unknown, status = 200) =>
+  Promise.resolve(new Response(JSON.stringify(corps), { status }));
+
 describe('App', () => {
-  it('demande le jeton, puis affiche le pipe avec les affaires reçues', async () => {
-    const fetchSimule = vi.fn((url: string) => {
+  it('propose de créer le premier compte tant qu’il n’y en a aucun', async () => {
+    vi.stubGlobal('fetch', (url: string) =>
+      url === '/api/etat' ? json({ installe: false }) : json({ erreur: 'Connexion requise' }, 401),
+    );
+    render(<App />);
+    await waitFor(() => expect(screen.getByText('Créer le premier compte')).toBeTruthy());
+    expect(screen.getByLabelText('Jeton d’installation')).toBeTruthy();
+  });
+
+  it('se connecte par identifiant et mot de passe, puis affiche le pipe', async () => {
+    let connecte = false;
+    const fetchSimule = vi.fn((url: string, init?: RequestInit) => {
+      if (url === '/api/moi') {
+        return connecte
+          ? json({ utilisateur: { id: '1', identifiant: 'marc', nom: 'Marc' } })
+          : json({ erreur: 'Connexion requise' }, 401);
+      }
+      if (url === '/api/etat') return json({ installe: true });
+      if (url === '/api/connexion') {
+        connecte = true;
+        return json({ utilisateur: { id: '1', identifiant: 'marc', nom: 'Marc' } });
+      }
       if (url.startsWith('/api/affaires')) {
-        return reponse([
+        return json([
           {
             id: '1',
             titre: 'Affaire fictive',
@@ -38,24 +57,38 @@ describe('App', () => {
           },
         ]);
       }
-      return reponse([]);
+      void init;
+      return json([]);
     });
     vi.stubGlobal('fetch', fetchSimule);
     window.location.hash = '#pipe';
 
     render(<App />);
-    fireEvent.change(screen.getByLabelText('Jeton d’accès'), { target: { value: 'un-jeton' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Entrer' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Se connecter' })).toBeTruthy());
+    fireEvent.change(screen.getByLabelText('Identifiant'), { target: { value: 'marc' } });
+    fireEvent.change(screen.getByLabelText('Mot de passe'), {
+      target: { value: 'un-mot-de-passe-solide' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Se connecter' }));
 
     await waitFor(() => expect(screen.getByText('Affaire fictive')).toBeTruthy());
-    const [, options] = fetchSimule.mock.calls[0] as unknown as [string, RequestInit];
-    expect((options.headers as Record<string, string>).authorization).toBe('Bearer un-jeton');
+    const appelConnexion = fetchSimule.mock.calls.find((c) => c[0] === '/api/connexion')!;
+    expect(JSON.parse(appelConnexion[1]!.body as string)).toEqual({
+      identifiant: 'marc',
+      motDePasse: 'un-mot-de-passe-solide',
+    });
+    expect(screen.getByRole('button', { name: 'Se déconnecter' })).toBeTruthy();
   });
 
-  it('revient à la saisie du jeton quand l’API le refuse', async () => {
-    vi.stubGlobal('fetch', () => Promise.resolve(new Response('{}', { status: 401 })));
-    sessionStorage.setItem('wasoria-crm-jeton', 'faux');
+  it('revient à la connexion quand la session expire', async () => {
+    vi.stubGlobal('fetch', (url: string) =>
+      url === '/api/moi'
+        ? json({ erreur: 'x' }, 401)
+        : url === '/api/etat'
+          ? json({ installe: true })
+          : json([]),
+    );
     render(<App />);
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Entrer' })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Se connecter' })).toBeTruthy());
   });
 });
