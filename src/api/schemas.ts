@@ -88,12 +88,22 @@ export const rendezVous = z.strictObject({
   compteRendu: z.string().max(50_000).nullable().optional(),
 });
 
+export const activite = z.strictObject({
+  type: z.enum(['note', 'appel', 'email', 'reunion']),
+  at: dateHeure,
+  titre: optTexte,
+  resume: z.string().max(50_000).nullable().optional(),
+  contactId: id.nullable().optional(),
+  entrepriseId: id.nullable().optional(),
+  opportuniteId: id.nullable().optional(),
+});
+
 export const pagination = z.object({
   limite: z.coerce.number().int().min(1).max(200).default(50),
   decalage: z.coerce.number().int().min(0).default(0),
 });
 
-export const creation = { entreprise, contact, affaire, tache, rendezVous };
+export const creation = { entreprise, contact, affaire, tache, rendezVous, activite };
 // Mise à jour partielle : mêmes champs, tous facultatifs.
 export const miseAJour = {
   entreprise: entreprise.partial(),
@@ -101,5 +111,6 @@ export const miseAJour = {
   affaire: affaire.partial(),
   tache: tache.partial(),
   rendezVous: rendezVous.partial(),
+  activite: activite.partial(),
 };
 export { id as idSchema };

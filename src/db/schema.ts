@@ -286,3 +286,26 @@ export const synchronisations = pgTable(
   },
   (t) => [uniqueIndex('synchronisations_pk_idx').on(t.connecteur, t.objet)],
 );
+
+// Les étapes du pipeline, partagées avec l'OS (même forme que ses étapes : id, libellé, ordre,
+// étape de clôture, gagnée, probabilité de gain en %). L'affaire garde son étape et, à part, `clos`.
+export const etapes = pgTable('etapes', {
+  id: text('id').primaryKey(),
+  label: text('label').notNull(),
+  ordre: integer('ordre').notNull(),
+  clos: boolean('clos').notNull().default(false),
+  gagne: boolean('gagne').notNull().default(false),
+  probabilite: integer('probabilite').notNull(),
+});
+
+// Journal des fiches supprimées ici : l'OS ne les efface jamais de lui-même, il les signale.
+export const suppressions = pgTable(
+  'suppressions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    objet: text('objet').notNull(),
+    ficheId: uuid('fiche_id').notNull(),
+    supprimeLe: timestamp('supprime_le', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('suppressions_le_idx').on(t.supprimeLe)],
+);

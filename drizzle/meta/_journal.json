@@ -22,6 +22,20 @@
       "when": 1794907419761,
       "tag": "0002_synchronisations",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794908220373,
+      "tag": "0003_etapes_suppressions",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794908220736,
+      "tag": "0004_etapes_par_defaut",
+      "breakpoints": true
     }
   ]
 }
