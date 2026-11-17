@@ -57,6 +57,20 @@
       "when": 1794913400839,
       "tag": "0007_indicateurs_par_defaut",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794914229438,
+      "tag": "0008_utilisateurs_role",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794914230486,
+      "tag": "0009_utilisateurs_existants_admin",
+      "breakpoints": true
     }
   ]
 }

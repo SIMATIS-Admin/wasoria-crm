@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { eur, enRetard, jour, montantOuvert, niveau, parEtape, score } from '../format';
 import type { Affaire, Entreprise, Etape } from '../types';
 import { useApi } from '../useApi';
+import { useRole } from '../role';
 import { Chargement, Formulaire, Pill } from '../ui';
 
 export function Pipe() {
   const affaires = useApi<Affaire[]>('/affaires?ouvertes=1&limite=200');
   const entreprises = useApi<Entreprise[]>('/entreprises?limite=200');
   const etapes = useApi<Etape[]>('/etapes');
+  const { peutEcrire } = useRole();
   const [creation, setCreation] = useState(false);
   if (!affaires.donnees || !entreprises.donnees || !etapes.donnees) {
     return <Chargement erreur={affaires.erreur ?? entreprises.erreur ?? etapes.erreur} />;
@@ -16,11 +18,13 @@ export function Pipe() {
 
   return (
     <>
-      <div>
-        <button className="cta" onClick={() => setCreation(true)}>
-          Nouvelle affaire
-        </button>
-      </div>
+      {peutEcrire && (
+        <div>
+          <button className="cta" onClick={() => setCreation(true)}>
+            Nouvelle affaire
+          </button>
+        </div>
+      )}
       <div className="board-wrap">
         <div className="board" style={{ ['--n' as string]: etapes.donnees.length }}>
           {etapes.donnees.map((etape) => {

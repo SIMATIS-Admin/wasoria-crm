@@ -12,6 +12,7 @@ import type {
   Tache,
 } from '../types';
 import { useApi } from '../useApi';
+import { useRole } from '../role';
 import { Chargement, Formulaire, Panel, Pill } from '../ui';
 
 type Onglet = 'suivi' | 'qualif' | 'contacts';
@@ -27,6 +28,7 @@ export function Affaire({ id }: { id: string }) {
   const etapes = useApi<Etape[]>('/etapes');
   const taches = useApi<Tache[]>(`/taches?opportuniteId=${id}&limite=100`);
   const activites = useApi<Activite[]>(`/activites?opportuniteId=${id}`);
+  const { peutEcrire } = useRole();
   const [onglet, setOnglet] = useState<Onglet>('suivi');
   const [creation, setCreation] = useState(false);
 
@@ -83,6 +85,7 @@ export function Affaire({ id }: { id: string }) {
           <button
             key={e.id}
             className={`step ${i < indice ? 'done' : i === indice ? 'cur' : ''}`}
+            disabled={!peutEcrire}
             onClick={() => void modifier({ etape: e.id })}
           >
             {e.label}
@@ -113,11 +116,13 @@ export function Affaire({ id }: { id: string }) {
           <div className="panel-b">
             {onglet === 'suivi' && (
               <div className="list">
-                <div>
-                  <button className="ghost" onClick={() => setCreation(true)}>
-                    Nouvelle tâche
-                  </button>
-                </div>
+                {peutEcrire && (
+                  <div>
+                    <button className="ghost" onClick={() => setCreation(true)}>
+                      Nouvelle tâche
+                    </button>
+                  </div>
+                )}
                 {taches.donnees?.map((t) => (
                   <div className="item ligne" key={t.id}>
                     <div>
@@ -128,7 +133,7 @@ export function Affaire({ id }: { id: string }) {
                         {libelleType(t.type)} · {jour(t.echeance)}
                       </div>
                     </div>
-                    {!t.faitAt && (
+                    {!t.faitAt && peutEcrire && (
                       <button className="ghost" onClick={() => void terminer(t.id)}>
                         Terminer
                       </button>
@@ -169,6 +174,7 @@ export function Affaire({ id }: { id: string }) {
                       min={0}
                       max={3}
                       value={a.qualification?.[cle] ?? 0}
+                      disabled={!peutEcrire}
                       onChange={(e) => void noter(cle, Number(e.target.value))}
                     />
                     <b className="num">{a.qualification?.[cle] ?? 0}/3</b>
@@ -202,7 +208,7 @@ export function Affaire({ id }: { id: string }) {
             </div>
           </Panel>
           <div className="actions">
-            {a.clos ? (
+            {!peutEcrire ? null : a.clos ? (
               <button className="ghost" onClick={() => void modifier({ clos: null })}>
                 Rouvrir
               </button>

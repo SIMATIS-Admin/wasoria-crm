@@ -1,6 +1,7 @@
 import { timingSafeEqual } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
+import { cheminApi, droitRequis, roleSuffit, ROLES } from './droits.js';
 import { DUREE_SESSION_MS, ErreurAuth, type Auth, type Utilisateur } from './service.js';
 
 declare module 'fastify' {
@@ -59,6 +60,8 @@ const erreur = (reply: FastifyReply, e: unknown) => {
       invalide: 400,
       'deja-installe': 409,
       existe: 409,
+      conflit: 409,
+      introuvable: 404,
     }[e.code];
     return reply.code(statut).send({ erreur: e.message });
   }
@@ -119,12 +122,22 @@ export function routesPubliques(app: FastifyInstance, auth: Auth, jetonInstallat
 export function exigerAuth(app: FastifyInstance, auth: Auth, jetonIntegration: string): void {
   app.decorateRequest('utilisateur', null);
   app.addHook('onRequest', async (request, reply) => {
+    const chemin = cheminApi(request.url);
     const bearer = /^Bearer (.+)$/.exec(request.headers.authorization ?? '')?.[1];
-    if (bearer && egal(bearer, jetonIntegration)) return;
+    if (bearer && egal(bearer, jetonIntegration)) {
+      // Le jeton des intégrations (OS, scripts) lit et écrit les données, mais ne gère pas les comptes.
+      if (droitRequis(request.method, chemin) === 'admin' && chemin.startsWith('/utilisateurs')) {
+        return reply.code(403).send({ erreur: 'Droits insuffisants' });
+      }
+      return;
+    }
     const cookie = lireCookie(request);
     const utilisateur = cookie ? await auth.lireSession(cookie) : null;
     if (!utilisateur) return reply.code(401).send({ erreur: 'Connexion requise' });
     if (!origineAcceptee(request)) return reply.code(403).send({ erreur: 'Origine refusée' });
+    if (!roleSuffit(utilisateur.role, droitRequis(request.method, chemin))) {
+      return reply.code(403).send({ erreur: 'Droits insuffisants pour cette action' });
+    }
     request.utilisateur = utilisateur;
   });
 }
@@ -141,5 +154,68 @@ export function routesConnectees(app: FastifyInstance, auth: Auth): void {
     if (cookie) await auth.deconnecter(cookie);
     poserCookie(request, reply, null);
     return reply.code(204).send();
+  });
+
+  // Changer son propre mot de passe : il faut le mot de passe actuel.
+  app.post('/moi/mot-de-passe', async (request, reply) => {
+    try {
+      if (!request.utilisateur) return await reply.code(404).send({ erreur: 'Pas de session' });
+      const corps = z.strictObject({ actuel: z.string(), nouveau: z.string() }).parse(request.body);
+      await auth.changerSonMotDePasse(
+        request.utilisateur.id,
+        corps.actuel,
+        corps.nouveau,
+        lireCookie(request),
+      );
+      return await reply.code(204).send();
+    } catch (e) {
+      return erreur(reply, e);
+    }
+  });
+
+  // Gestion des comptes, réservée aux administrateurs (le garde s'en charge).
+  app.get('/utilisateurs', () => auth.lister());
+
+  app.post('/utilisateurs', async (request, reply) => {
+    try {
+      const corps = z
+        .strictObject({
+          identifiant: z.string(),
+          nom: z.string(),
+          motDePasse: z.string(),
+          role: z.enum(ROLES).default('commercial'),
+        })
+        .parse(request.body);
+      return await reply.code(201).send(await auth.creerUtilisateur(corps));
+    } catch (e) {
+      return erreur(reply, e);
+    }
+  });
+
+  app.patch('/utilisateurs/:id', async (request, reply) => {
+    try {
+      const { id } = z.object({ id: z.uuid() }).parse(request.params);
+      const corps = z
+        .strictObject({
+          nom: z.string().optional(),
+          role: z.enum(ROLES).optional(),
+          actif: z.boolean().optional(),
+        })
+        .parse(request.body);
+      return await auth.modifierCompte(id, corps, request.utilisateur?.id);
+    } catch (e) {
+      return erreur(reply, e);
+    }
+  });
+
+  app.post('/utilisateurs/:id/mot-de-passe', async (request, reply) => {
+    try {
+      const { id } = z.object({ id: z.uuid() }).parse(request.params);
+      const corps = z.strictObject({ motDePasse: z.string() }).parse(request.body);
+      await auth.reinitialiserMotDePasse(id, corps.motDePasse);
+      return await reply.code(204).send();
+    } catch (e) {
+      return erreur(reply, e);
+    }
   });
 }

@@ -2,14 +2,17 @@ import { useState, type FormEvent } from 'react';
 import { appel, ErreurApi } from '../api';
 import type { Etape } from '../types';
 import { useApi } from '../useApi';
+import { useRole } from '../role';
 import { Chargement, Panel } from '../ui';
 
 type Suppression = { etape: Etape; affaires: number };
 
 export function Etapes() {
+  const { estAdmin } = useRole();
   const liste = useApi<Etape[]>('/etapes');
   const [erreur, setErreur] = useState<string | null>(null);
   const [suppression, setSuppression] = useState<Suppression | null>(null);
+  if (!estAdmin) return <p className="muted">Réservé aux administrateurs.</p>;
   if (!liste.donnees) return <Chargement erreur={liste.erreur} />;
   const etapes = liste.donnees;
 

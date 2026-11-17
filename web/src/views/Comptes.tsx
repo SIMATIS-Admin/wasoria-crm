@@ -3,9 +3,11 @@ import { eur } from '../format';
 import { libelleEtape } from '../etapes';
 import type { Affaire, Contact, Entreprise, Etape } from '../types';
 import { useApi } from '../useApi';
+import { useRole } from '../role';
 import { Chargement, Formulaire, Panel } from '../ui';
 
 export function Comptes() {
+  const { peutEcrire } = useRole();
   const [recherche, setRecherche] = useState('');
   const [choix, setChoix] = useState<string | null>(null);
   const [dialogue, setDialogue] = useState<'entreprise' | 'contact' | null>(null);
@@ -29,9 +31,11 @@ export function Comptes() {
           value={recherche}
           onChange={(e) => setRecherche(e.target.value)}
         />
-        <button className="cta" onClick={() => setDialogue('entreprise')}>
-          Nouvelle entreprise
-        </button>
+        {peutEcrire && (
+          <button className="cta" onClick={() => setDialogue('entreprise')}>
+            Nouvelle entreprise
+          </button>
+        )}
       </div>
       <div className="split">
         <div className="panel">
@@ -71,9 +75,11 @@ export function Comptes() {
                   </div>
                 ))}
                 {contacts.donnees?.length === 0 && <span className="muted">—</span>}
-                <button className="ghost" onClick={() => setDialogue('contact')}>
-                  Nouveau contact
-                </button>
+                {peutEcrire && (
+                  <button className="ghost" onClick={() => setDialogue('contact')}>
+                    Nouveau contact
+                  </button>
+                )}
               </div>
               <div>
                 <div className="lbl">Affaires</div>

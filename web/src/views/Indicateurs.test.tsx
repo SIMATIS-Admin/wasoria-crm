@@ -1,7 +1,14 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { RoleContext, type Role } from '../role';
 import { Indicateurs } from './Indicateurs';
+
+const avecRole = (role: Role) => (
+  <RoleContext.Provider value={role}>
+    <Indicateurs />
+  </RoleContext.Provider>
+);
 
 const ETAPES = [
   { id: 'qualification', label: 'Qualification', ordre: 1, probabilite: 40 },
@@ -87,7 +94,7 @@ afterEach(() => {
 describe('Indicateurs', () => {
   it('montre chaque indicateur avec sa valeur, son objectif et son statut', async () => {
     simuler();
-    render(<Indicateurs />);
+    render(avecRole('admin'));
     const delai = await screen.findByRole('region', { name: 'Délai de remise du devis' });
     expect(within(delai).getByText('12,5')).toBeTruthy();
     expect(within(delai).getByText('Hors objectif')).toBeTruthy();
@@ -110,7 +117,7 @@ describe('Indicateurs', () => {
 
   it('relit les indicateurs quand on change de période', async () => {
     const appels = simuler();
-    render(<Indicateurs />);
+    render(avecRole('admin'));
     await screen.findByRole('region', { name: 'Délai de remise du devis' });
     fireEvent.click(screen.getByRole('button', { name: '180 jours' }));
     await waitFor(() =>
@@ -120,7 +127,7 @@ describe('Indicateurs', () => {
 
   it('enregistre l’objectif et les étapes réglés', async () => {
     const appels = simuler();
-    render(<Indicateurs />);
+    render(avecRole('admin'));
     const carte = await screen.findByRole('region', { name: 'Du devis à la commande' });
     fireEvent.click(within(carte).getByRole('button', { name: 'Régler' }));
     const dialogue = await screen.findByRole('dialog');
@@ -142,10 +149,17 @@ describe('Indicateurs', () => {
 
   it('un indicateur sans étape n’en demande pas pour les entrants', async () => {
     simuler();
-    render(<Indicateurs />);
+    render(avecRole('admin'));
     const carte = await screen.findByRole('region', { name: 'Opportunités entrantes par semaine' });
     fireEvent.click(within(carte).getByRole('button', { name: 'Régler' }));
     const dialogue = await screen.findByRole('dialog');
     expect(within(dialogue).queryByLabelText('Étape de départ')).toBeNull();
+  });
+
+  it('cache le réglage à qui n’est pas administrateur', async () => {
+    simuler();
+    render(avecRole('commercial'));
+    await screen.findByRole('region', { name: 'Délai de remise du devis' });
+    expect(screen.queryByRole('button', { name: 'Régler' })).toBeNull();
   });
 });

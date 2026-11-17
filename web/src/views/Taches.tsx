@@ -4,11 +4,13 @@ import { TYPES_TACHE, libelleType } from '../etapes';
 import { enRetard, jourHeure } from '../format';
 import type { Affaire, Tache } from '../types';
 import { useApi } from '../useApi';
+import { useRole } from '../role';
 import { Chargement, Formulaire } from '../ui';
 
 export function Taches() {
   const taches = useApi<Tache[]>('/taches?ouvertes=1&limite=200');
   const affaires = useApi<Affaire[]>('/affaires?limite=200');
+  const { peutEcrire } = useRole();
   const [creation, setCreation] = useState(false);
   if (!taches.donnees) return <Chargement erreur={taches.erreur} />;
   const titre = (id: string | null) => affaires.donnees?.find((a) => a.id === id)?.titre;
@@ -20,11 +22,13 @@ export function Taches() {
 
   return (
     <>
-      <div>
-        <button className="cta" onClick={() => setCreation(true)}>
-          Nouvelle tâche
-        </button>
-      </div>
+      {peutEcrire && (
+        <div>
+          <button className="cta" onClick={() => setCreation(true)}>
+            Nouvelle tâche
+          </button>
+        </div>
+      )}
       <div className="panel">
         <div className="tbl-wrap">
           <table>
@@ -53,9 +57,11 @@ export function Taches() {
                     )}
                   </td>
                   <td>
-                    <button className="ghost" onClick={() => void terminer(t.id)}>
-                      Terminer
-                    </button>
+                    {peutEcrire && (
+                      <button className="ghost" onClick={() => void terminer(t.id)}>
+                        Terminer
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

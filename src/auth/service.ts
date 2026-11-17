@@ -1,7 +1,8 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { and, count, eq, gt, lt } from 'drizzle-orm';
+import { and, count, eq, gt, lt, ne } from 'drizzle-orm';
 import type { Db } from '../db/index.js';
 import { sessions, utilisateurs } from '../db/schema.js';
+import { ROLES, type Role } from './droits.js';
 import { EMPREINTE_BIDON, hacher, problemeMotDePasse, verifier } from './mot-de-passe.js';
 
 export const DUREE_SESSION_MS = 7 * 86_400_000;
@@ -10,11 +11,18 @@ const RAFRAICHIR_APRES_MS = 3_600_000;
 const ECHECS_MAX = 5;
 const BLOCAGE_MS = 15 * 60_000;
 
-export type Utilisateur = { id: string; identifiant: string; nom: string };
+export type Utilisateur = { id: string; identifiant: string; nom: string; role: Role };
 
 export class ErreurAuth extends Error {
   constructor(
-    readonly code: 'identifiants' | 'bloque' | 'invalide' | 'deja-installe' | 'existe',
+    readonly code:
+      | 'identifiants'
+      | 'bloque'
+      | 'invalide'
+      | 'deja-installe'
+      | 'existe'
+      | 'conflit'
+      | 'introuvable',
     message: string,
   ) {
     super(message);
@@ -34,7 +42,11 @@ export function creerAuth(db: Db, maintenant: () => Date = () => new Date()) {
     identifiant: string;
     nom: string;
     motDePasse: string;
+    role?: Role;
   }) {
+    if (entree.role !== undefined && !ROLES.includes(entree.role)) {
+      throw new ErreurAuth('invalide', `Rôle inconnu : ${entree.role}`);
+    }
     const identifiant = normaliser(entree.identifiant);
     if (!IDENTIFIANT.test(identifiant)) {
       throw new ErreurAuth(
@@ -53,11 +65,17 @@ export function creerAuth(db: Db, maintenant: () => Date = () => new Date()) {
     if (deja) throw new ErreurAuth('existe', 'Cet identifiant existe déjà');
     const [u] = await db
       .insert(utilisateurs)
-      .values({ identifiant, nom, motDePasse: await hacher(entree.motDePasse) })
+      .values({
+        identifiant,
+        nom,
+        motDePasse: await hacher(entree.motDePasse),
+        role: entree.role ?? 'commercial',
+      })
       .returning({
         id: utilisateurs.id,
         identifiant: utilisateurs.identifiant,
         nom: utilisateurs.nom,
+        role: utilisateurs.role,
       });
     return u!;
   }
@@ -75,6 +93,68 @@ export function creerAuth(db: Db, maintenant: () => Date = () => new Date()) {
     return jeton;
   }
 
+  // Nom, rôle ou activation d'un compte. Il reste toujours au moins un administrateur actif, et on
+  // ne se désactive pas soi-même (`acteurId`) : sinon plus personne ne pourrait gérer les comptes.
+  async function modifierCompte(
+    id: string,
+    patch: { nom?: string; role?: Role; actif?: boolean },
+    acteurId?: string,
+  ) {
+    if (patch.role !== undefined && !ROLES.includes(patch.role)) {
+      throw new ErreurAuth('invalide', `Rôle inconnu : ${patch.role}`);
+    }
+    if (patch.nom !== undefined && !patch.nom.trim()) {
+      throw new ErreurAuth('invalide', 'Le nom est obligatoire');
+    }
+    const [u] = await db.select().from(utilisateurs).where(eq(utilisateurs.id, id));
+    if (!u) throw new ErreurAuth('introuvable', 'Compte introuvable');
+    if (patch.actif === false && acteurId === id) {
+      throw new ErreurAuth('conflit', 'Vous ne pouvez pas désactiver votre propre compte');
+    }
+    const perdAdmin =
+      u.role === 'admin' &&
+      u.actif &&
+      (patch.role === 'commercial' || patch.role === 'lecture' || patch.actif === false);
+    if (perdAdmin) {
+      const [{ n } = { n: 0 }] = await db
+        .select({ n: count() })
+        .from(utilisateurs)
+        .where(
+          and(
+            eq(utilisateurs.role, 'admin'),
+            eq(utilisateurs.actif, true),
+            ne(utilisateurs.id, id),
+          ),
+        );
+      if (n === 0) {
+        throw new ErreurAuth('conflit', 'Il doit rester au moins un administrateur actif');
+      }
+    }
+    const valeurs = {
+      ...(patch.nom !== undefined ? { nom: patch.nom.trim() } : {}),
+      ...(patch.role !== undefined ? { role: patch.role } : {}),
+      ...(patch.actif !== undefined ? { actif: patch.actif } : {}),
+    };
+    if (Object.keys(valeurs).length === 0)
+      throw new ErreurAuth('invalide', 'Aucun champ à modifier');
+    const [maj] = await db
+      .update(utilisateurs)
+      .set(valeurs)
+      .where(eq(utilisateurs.id, id))
+      .returning({
+        id: utilisateurs.id,
+        identifiant: utilisateurs.identifiant,
+        nom: utilisateurs.nom,
+        role: utilisateurs.role,
+        actif: utilisateurs.actif,
+      });
+    // Désactiver ou changer de rôle : les sessions ouvertes sont rouvertes avec les bons droits.
+    if (patch.actif === false || patch.role !== undefined) {
+      await db.delete(sessions).where(eq(sessions.utilisateurId, id));
+    }
+    return maj!;
+  }
+
   return {
     creerUtilisateur,
 
@@ -87,7 +167,8 @@ export function creerAuth(db: Db, maintenant: () => Date = () => new Date()) {
     async installer(entree: { identifiant: string; nom: string; motDePasse: string }) {
       const [{ n } = { n: 0 }] = await db.select({ n: count() }).from(utilisateurs);
       if (n > 0) throw new ErreurAuth('deja-installe', 'Le CRM a déjà un compte');
-      return creerUtilisateur(entree);
+      // La personne qui installe le CRM en est l'administratrice.
+      return creerUtilisateur({ ...entree, role: 'admin' });
     },
 
     async connecter(appelant: string, identifiantSaisi: string, motDePasse: string) {
@@ -116,7 +197,7 @@ export function creerAuth(db: Db, maintenant: () => Date = () => new Date()) {
         .where(eq(utilisateurs.id, u.id));
       return {
         jeton: await nouvelleSession(u.id),
-        utilisateur: { id: u.id, identifiant: u.identifiant, nom: u.nom },
+        utilisateur: { id: u.id, identifiant: u.identifiant, nom: u.nom, role: u.role },
       };
     },
 
@@ -135,7 +216,7 @@ export function creerAuth(db: Db, maintenant: () => Date = () => new Date()) {
           .set({ vuLe: t, expireLe: new Date(t.getTime() + DUREE_SESSION_MS) })
           .where(eq(sessions.id, id));
       }
-      return { id: l.u.id, identifiant: l.u.identifiant, nom: l.u.nom };
+      return { id: l.u.id, identifiant: l.u.identifiant, nom: l.u.nom, role: l.u.role };
     },
 
     async deconnecter(jeton: string) {
@@ -157,19 +238,62 @@ export function creerAuth(db: Db, maintenant: () => Date = () => new Date()) {
 
     async activer(identifiantSaisi: string, actif: boolean) {
       const [u] = await db
+        .select({ id: utilisateurs.id })
+        .from(utilisateurs)
+        .where(eq(utilisateurs.identifiant, normaliser(identifiantSaisi)));
+      if (!u) throw new ErreurAuth('introuvable', 'Compte introuvable');
+      await modifierCompte(u.id, { actif });
+    },
+
+    modifierCompte,
+
+    // Réinitialisation par un administrateur : coupe les sessions du compte.
+    async reinitialiserMotDePasse(id: string, motDePasse: string) {
+      const probleme = problemeMotDePasse(motDePasse);
+      if (probleme) throw new ErreurAuth('invalide', probleme);
+      const [u] = await db
         .update(utilisateurs)
-        .set({ actif })
-        .where(eq(utilisateurs.identifiant, normaliser(identifiantSaisi)))
+        .set({ motDePasse: await hacher(motDePasse) })
+        .where(eq(utilisateurs.id, id))
         .returning({ id: utilisateurs.id });
-      if (!u) throw new ErreurAuth('invalide', 'Compte introuvable');
-      if (!actif) await db.delete(sessions).where(eq(sessions.utilisateurId, u.id));
+      if (!u) throw new ErreurAuth('introuvable', 'Compte introuvable');
+      await db.delete(sessions).where(eq(sessions.utilisateurId, id));
+    },
+
+    // Changement par la personne elle-même : il faut son mot de passe actuel ; ses autres sessions se
+    // ferment, celle en cours reste ouverte.
+    async changerSonMotDePasse(
+      id: string,
+      actuel: string,
+      nouveau: string,
+      jetonSession: string | null,
+    ) {
+      const [u] = await db.select().from(utilisateurs).where(eq(utilisateurs.id, id));
+      if (!u || !(await verifier(actuel, u.motDePasse))) {
+        throw new ErreurAuth('identifiants', 'Le mot de passe actuel est incorrect');
+      }
+      const probleme = problemeMotDePasse(nouveau);
+      if (probleme) throw new ErreurAuth('invalide', probleme);
+      await db
+        .update(utilisateurs)
+        .set({ motDePasse: await hacher(nouveau) })
+        .where(eq(utilisateurs.id, id));
+      await db
+        .delete(sessions)
+        .where(
+          jetonSession
+            ? and(eq(sessions.utilisateurId, id), ne(sessions.id, empreinte(jetonSession)))
+            : eq(sessions.utilisateurId, id),
+        );
     },
 
     lister: () =>
       db
         .select({
+          id: utilisateurs.id,
           identifiant: utilisateurs.identifiant,
           nom: utilisateurs.nom,
+          role: utilisateurs.role,
           actif: utilisateurs.actif,
           derniereConnexion: utilisateurs.derniereConnexion,
         })

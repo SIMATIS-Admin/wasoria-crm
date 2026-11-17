@@ -9,6 +9,7 @@ export default defineConfig({
     // Chaque fichier qui touche la base démarre son propre Postgres : en limiter le nombre en parallèle
     // évite les démarrages qui traînent quand la machine est chargée.
     maxWorkers: 4,
+    setupFiles: ['web/src/test-setup.ts'],
     hookTimeout: 120_000,
   },
 });

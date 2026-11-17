@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { appel, ErreurApi } from '../api';
 import type { Etape, Indicateur } from '../types';
 import { useApi } from '../useApi';
+import { useRole } from '../role';
 import { Chargement, Pill } from '../ui';
 
 const PERIODES = [30, 90, 180, 365];
@@ -20,6 +21,7 @@ const nombre = (n: number) =>
   new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(n);
 
 export function Indicateurs() {
+  const { estAdmin } = useRole();
   const [jours, setJours] = useState(90);
   const donnees = useApi<{ indicateurs: Indicateur[] }>(`/indicateurs?jours=${jours}`);
   const etapes = useApi<Etape[]>('/etapes');
@@ -101,11 +103,13 @@ export function Indicateurs() {
                   ? 'Pas d’objectif fixé'
                   : `Objectif : ${i.type === 'delai' ? '≤' : '≥'} ${nombre(i.objectif)} ${i.unite}`}
               </div>
-              <div>
-                <button className="ghost" onClick={() => setEdition(i)}>
-                  Régler
-                </button>
-              </div>
+              {estAdmin && (
+                <div>
+                  <button className="ghost" onClick={() => setEdition(i)}>
+                    Régler
+                  </button>
+                </div>
+              )}
             </section>
           );
         })}

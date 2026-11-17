@@ -3,6 +3,7 @@ import { appel } from '../api';
 import { jourHeure } from '../format';
 import type { RendezVous as TRdv } from '../types';
 import { useApi } from '../useApi';
+import { useRole } from '../role';
 import { Chargement, Formulaire } from '../ui';
 
 const STATUTS = [
@@ -13,6 +14,7 @@ const STATUTS = [
 
 export function RendezVous() {
   const liste = useApi<TRdv[]>('/rendez-vous?limite=200');
+  const { peutEcrire } = useRole();
   const [creation, setCreation] = useState(false);
   if (!liste.donnees) return <Chargement erreur={liste.erreur} />;
 
@@ -23,11 +25,13 @@ export function RendezVous() {
 
   return (
     <>
-      <div>
-        <button className="cta" onClick={() => setCreation(true)}>
-          Nouveau rendez-vous
-        </button>
-      </div>
+      {peutEcrire && (
+        <div>
+          <button className="cta" onClick={() => setCreation(true)}>
+            Nouveau rendez-vous
+          </button>
+        </div>
+      )}
       <div className="panel">
         <div className="tbl-wrap">
           <table>
@@ -49,6 +53,7 @@ export function RendezVous() {
                     <select
                       aria-label={`Statut de ${r.titre}`}
                       value={r.statut}
+                      disabled={!peutEcrire}
                       onChange={(e) => void classer(r.id, e.target.value)}
                     >
                       {STATUTS.map((s) => (
