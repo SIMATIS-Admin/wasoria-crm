@@ -50,3 +50,18 @@ export const montantOuvert = (affaires: Affaire[]) =>
 
 export const parEtape = (affaires: Affaire[], etape: string) =>
   affaires.filter((a) => a.etape === etape);
+
+// Avec les centimes (mensualités).
+export const eur2 = (n: number | null | undefined) =>
+  n == null
+    ? '—'
+    : new Intl.NumberFormat('fr-FR', {
+        style: 'currency',
+        currency: 'EUR',
+        minimumFractionDigits: 2,
+      }).format(n);
+
+export const jourLong = (s: string | null | undefined) =>
+  s
+    ? new Date(s).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+    : '—';

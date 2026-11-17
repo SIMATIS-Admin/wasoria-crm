@@ -3,7 +3,10 @@ import { asc, count, eq } from 'drizzle-orm';
 import { createDb, type Db } from '../db/index.js';
 import {
   activites,
+  articles,
   contacts,
+  devis,
+  devisLignes,
   entreprises,
   etapes,
   opportunites,
@@ -13,7 +16,9 @@ import {
 import { runMigrations } from '../migrate.js';
 import {
   AFFAIRES,
+  ARTICLES,
   CONTACTS,
+  DEVIS_DEMO,
   ENTREPRISES,
   RENDEZ_VOUS,
   SUIVI,
@@ -78,6 +83,46 @@ export async function seedDemo(db: Db): Promise<boolean> {
         })
         .returning({ id: opportunites.id });
       a.set(x.cle, r!.id);
+    }
+    const art = new Map<string, { id: string; nom: string; prix: number; recurrent: boolean }>();
+    for (const [i, x] of ARTICLES.entries()) {
+      const [r] = await tx
+        .insert(articles)
+        .values({ ...x, ordre: i, source: 'demo' })
+        .returning();
+      art.set(x.reference, r!);
+    }
+    const annee = new Date().getFullYear();
+    for (const [i, q] of DEVIS_DEMO.entries()) {
+      const envoye = q.statut !== 'brouillon';
+      const [d] = await tx
+        .insert(devis)
+        .values({
+          numero: `D-${annee}-${String(i + 1).padStart(3, '0')}`,
+          opportuniteId: a.get(q.a)!,
+          statut: q.statut,
+          formule: q.formule,
+          dureeMois: q.dureeMois,
+          intro: q.intro,
+          envoyeLe: envoye ? new Date() : null,
+          decideLe: q.statut === 'accepte' ? new Date() : null,
+          source: 'demo',
+        })
+        .returning({ id: devis.id });
+      await tx.insert(devisLignes).values(
+        q.lignes.map(([ref, quantite], j) => {
+          const x = art.get(ref)!;
+          return {
+            devisId: d!.id,
+            articleId: x.id,
+            designation: x.nom,
+            prixUnitaire: x.prix,
+            recurrent: x.recurrent,
+            quantite,
+            ordre: j,
+          };
+        }),
+      );
     }
     for (const t of TACHES) {
       const type = t.type as 'appel' | 'email' | 'tache' | 'reunion';

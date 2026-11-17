@@ -4,6 +4,7 @@ import { TYPES_TACHE, libelleType } from '../etapes';
 import { CRITERES, eur, enRetard, jour, niveau, score } from '../format';
 import type {
   Activite,
+  DevisResume,
   Affaire as TAffaire,
   Contact,
   Entreprise,
@@ -14,6 +15,7 @@ import type {
 import { useApi } from '../useApi';
 import { useRole } from '../role';
 import { Chargement, Formulaire, Panel, Pill } from '../ui';
+import { montantDe, STATUTS } from './DevisListe';
 
 type Onglet = 'suivi' | 'qualif' | 'contacts';
 
@@ -29,6 +31,7 @@ export function Affaire({ id }: { id: string }) {
     affaire.donnees ? `/etapes?pipeline=${affaire.donnees.pipelineId}` : null,
   );
   const taches = useApi<Tache[]>(`/taches?opportuniteId=${id}&limite=100`);
+  const devis = useApi<DevisResume[]>(`/devis?affaireId=${id}`);
   const activites = useApi<Activite[]>(`/activites?opportuniteId=${id}`);
   const { peutEcrire, peutModifierAffaire } = useRole();
   const [message, setMessage] = useState<string | null>(null);
@@ -63,6 +66,17 @@ export function Affaire({ id }: { id: string }) {
         [cle]: valeur,
       },
     });
+
+  // Prépare un devis vide pour cette affaire et l'ouvre.
+  const preparerDevis = async () => {
+    setMessage(null);
+    try {
+      const d = await appel<{ id: string }>('POST', '/devis', { affaireId: id });
+      window.location.hash = `devis/${d.id}`;
+    } catch (e) {
+      setMessage(e instanceof ErreurApi ? e.message : 'Création impossible');
+    }
+  };
 
   // Une vente gagnée ouvre un dossier après-vente : on s'y rend, ou on y est déjà.
   const creerDossier = async () => {
@@ -228,6 +242,29 @@ export function Affaire({ id }: { id: string }) {
               <Champ label="Origine" valeur={a.origine ?? '—'} />
               <Champ label="Suivie par" valeur={a.proprietaire ?? '—'} />
               <Champ label="Prochaine action" valeur={a.prochaineEtape ?? '—'} />
+            </div>
+          </Panel>
+          <Panel titre="Devis">
+            <div className="list">
+              {devis.donnees?.map((q) => (
+                <div className="item ligne" key={q.id}>
+                  <div>
+                    <a className="link" href={`#devis/${q.id}`}>
+                      {q.numero}
+                    </a>{' '}
+                    <span className="small muted">· {montantDe(q)}</span>
+                  </div>
+                  <Pill classe={STATUTS[q.statut].classe}>{STATUTS[q.statut].label}</Pill>
+                </div>
+              ))}
+              {devis.donnees?.length === 0 && <span className="muted">Aucun devis.</span>}
+              {editable && (
+                <div>
+                  <button className="ghost" onClick={() => void preparerDevis()}>
+                    Préparer un devis
+                  </button>
+                </div>
+              )}
             </div>
           </Panel>
           <div className="actions">

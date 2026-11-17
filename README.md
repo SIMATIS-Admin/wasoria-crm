@@ -30,6 +30,17 @@ Prérequis : Node 24, Docker (tests), un Postgres.
 
 L'API vit sous `/api`. Ses routes exigent soit une session ouverte par l'interface (cookie), soit `Authorization: Bearer <API_TOKEN>` pour les intégrations (connecteur de l'OS, scripts).
 
+## Devis
+
+Un devis se prépare depuis la fiche d'une affaire (« Préparer un devis ») et se retrouve dans l'écran **Devis**. Il pioche ses lignes dans le **catalogue d'articles** (Réglages > Articles : référence, nom, prix HT, « une fois » ou « chaque année »), et peut se faire de deux façons :
+
+- **Achat** : l'investissement (lignes payées une fois), les services annuels (lignes facturées chaque année) et le total de la première année ;
+- **Abonnement** : l'investissement est financé (taux réglable, 4 % au départ, sur 36, 48 ou 60 mois) et les services annuels sont lissés : une mensualité, le coût du financement, le total sur la durée.
+
+Chaque ligne garde une copie du nom et du prix au moment du devis : changer un prix du catalogue ne modifie pas un devis déjà fait. Prix négociable ligne par ligne via l'API. Le numéro est `D-<année>-<rang>`. Le devis suit un cycle (brouillon, envoyé, accepté ou refusé) ; envoyé, il ne se modifie plus sans repasser en brouillon. L'aperçu à droite s'imprime tel quel (**Imprimer / PDF**). Qui peut quoi : un commercial prépare et modifie, seuls les administrateurs règlent le catalogue et suppriment ; le rôle après-vente suit ses droits sur les affaires.
+
+Pas encore : le lien avec Odoo (articles et prix lus dans Odoo, devis accepté qui devient une commande Odoo), l'envoi par email, la TVA et les conditions de paiement. Les articles de démonstration sont fictifs.
+
 ## Après-vente
 
 Deux pipes : **Vente** (celui que partage l'OS) et **Après-vente** (installation, mise en service, suivi et maintien en conditions opérationnelles, renouvellement : étapes de départ à adapter dans l'écran « Étapes », un onglet par pipe). L'écran Pipe a un onglet par pipe.

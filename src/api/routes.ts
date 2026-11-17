@@ -16,6 +16,7 @@ import {
 } from '../db/schema.js';
 import { registerEchange } from '../echange/routes.js';
 import { registerLiens } from '../echange/liens.js';
+import { registerDevis } from '../devis/routes.js';
 import { registerIndicateurs } from '../indicateurs/routes.js';
 import { peutModifierAffaire } from '../auth/droits.js';
 import { etapeExiste, pipeExiste, registerEtapes } from './etapes.js';
@@ -321,6 +322,7 @@ export function registerRoutes(app: FastifyInstance, db: Db, odoo?: ServiceOdoo)
 
   registerEtapes(app, db);
   registerIndicateurs(app, db);
+  registerDevis(app, db);
   registerLiens(app, db);
   registerEchange(app, db);
 

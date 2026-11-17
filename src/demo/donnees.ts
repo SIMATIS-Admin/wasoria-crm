@@ -285,3 +285,64 @@ export const SUIVI = [
     resume: 'Les conditions sont presque validées.',
   },
 ];
+
+// Catalogue fictif : des noms et des prix génériques, rien qui vienne d'une vraie offre.
+export const ARTICLES: { reference: string; nom: string; prix: number; recurrent: boolean }[] = [
+  { reference: 'CAP', nom: 'Capteur de détection (par point)', prix: 5000, recurrent: false },
+  { reference: 'INST', nom: 'Installation et calibration', prix: 1500, recurrent: false },
+  { reference: 'FORM', nom: 'Formation des opérateurs', prix: 900, recurrent: false },
+  { reference: 'PLAT', nom: 'Plateforme de suivi (par site)', prix: 2400, recurrent: true },
+  { reference: 'ANAL', nom: 'Analyse des flux (par site)', prix: 1200, recurrent: true },
+  { reference: 'MAINT', nom: 'Maintenance (par capteur)', prix: 600, recurrent: true },
+];
+
+// Devis de démonstration : l'affaire (sa clé), la formule, l'état, et les lignes (référence, quantité).
+export const DEVIS_DEMO: {
+  a: string;
+  formule: 'achat' | 'abonnement';
+  dureeMois: number;
+  statut: 'brouillon' | 'envoye' | 'accepte';
+  intro: string;
+  lignes: [string, number][];
+}[] = [
+  {
+    a: 'x1',
+    formule: 'abonnement',
+    dureeMois: 48,
+    statut: 'envoye',
+    intro:
+      'Détecter les objets dangereux avant qu’ils ne chauffent, pour protéger vos opérateurs et la continuité de vos lignes.',
+    lignes: [
+      ['CAP', 4],
+      ['INST', 1],
+      ['FORM', 1],
+      ['PLAT', 1],
+      ['MAINT', 4],
+    ],
+  },
+  {
+    a: 'x5',
+    formule: 'achat',
+    dureeMois: 48,
+    statut: 'brouillon',
+    intro: 'Deux lignes équipées, avec formation et suivi.',
+    lignes: [
+      ['CAP', 2],
+      ['INST', 1],
+      ['MAINT', 2],
+    ],
+  },
+  {
+    a: 'x9',
+    formule: 'achat',
+    dureeMois: 48,
+    statut: 'accepte',
+    intro: 'Équipement du second site.',
+    lignes: [
+      ['CAP', 2],
+      ['INST', 1],
+      ['FORM', 1],
+      ['ANAL', 1],
+    ],
+  },
+];

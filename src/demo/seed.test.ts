@@ -64,3 +64,23 @@ describe('historique de démonstration', () => {
     expect(await historiqueDemo(db)).toBe(11);
   });
 });
+
+describe('catalogue et devis de démonstration', () => {
+  it('charge un catalogue fictif et trois devis qui se calculent', async () => {
+    const { rows: a } = await base.pool.query<{ n: string }>(
+      "select count(*) n from articles where source = 'demo'",
+    );
+    expect(Number(a[0]!.n)).toBe(6);
+    const { rows } = await base.pool.query<{
+      numero: string;
+      statut: string;
+      lignes: string;
+      total: string;
+    }>(
+      'select d.numero, d.statut, count(l.id) lignes, sum(l.prix_unitaire * l.quantite) total from devis d join devis_lignes l on l.devis_id = d.id group by d.id order by d.numero',
+    );
+    expect(rows.map((r) => r.statut)).toEqual(['envoye', 'brouillon', 'accepte']);
+    expect(rows.map((r) => Number(r.lignes))).toEqual([5, 3, 4]);
+    expect(rows.every((r) => Number(r.total) > 0)).toBe(true);
+  });
+});
