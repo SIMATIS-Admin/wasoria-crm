@@ -16,6 +16,7 @@ import {
 } from '../db/schema.js';
 import { registerEchange } from '../echange/routes.js';
 import { registerLiens } from '../echange/liens.js';
+import { registerDemo } from '../demo/routes.js';
 import { registerDevis } from '../devis/routes.js';
 import { registerIndicateurs } from '../indicateurs/routes.js';
 import { peutModifierAffaire } from '../auth/droits.js';
@@ -35,7 +36,12 @@ const convertir = (c: Record<string, unknown>, cles: string[]) =>
 // Comme dans l'OS, le canal d'une tâche se déduit de son type.
 const canalDe = (type: string) => (type === 'appel' || type === 'email' ? type : 'tache');
 
-export function registerRoutes(app: FastifyInstance, db: Db, odoo?: ServiceOdoo): void {
+export function registerRoutes(
+  app: FastifyInstance,
+  db: Db,
+  odoo?: ServiceOdoo,
+  demo = false,
+): void {
   app.setErrorHandler((error, _request, reply) => {
     if (error instanceof ZodError) {
       return reply.code(400).send({
@@ -323,6 +329,7 @@ export function registerRoutes(app: FastifyInstance, db: Db, odoo?: ServiceOdoo)
   registerEtapes(app, db);
   registerIndicateurs(app, db);
   registerDevis(app, db);
+  registerDemo(app, db, demo); // TEMPORAIRE : bouton « Démo », à retirer avec src/demo/routes.ts
   registerLiens(app, db);
   registerEchange(app, db);
 

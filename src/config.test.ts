@@ -9,6 +9,7 @@ describe('loadConfig', () => {
       trustProxy: false,
       port: 4400,
       realWrites: false,
+      demo: false,
     });
   });
   it('refuse un jeton trop court', () => {

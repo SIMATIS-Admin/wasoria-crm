@@ -30,6 +30,12 @@ Prérequis : Node 24, Docker (tests), un Postgres.
 
 L'API vit sous `/api`. Ses routes exigent soit une session ouverte par l'interface (cookie), soit `Authorization: Bearer <API_TOKEN>` pour les intégrations (connecteur de l'OS, scripts).
 
+## Mode démonstration (temporaire)
+
+Avec `DEMO_MODE=on` dans l'environnement du serveur, les administrateurs voient un bouton **Démo** dans l'en-tête : après confirmation, il **efface** les données de travail (comptes clients, contacts, affaires, tâches, rendez-vous, devis, catalogue), remet les étapes et les indicateurs à leur état de départ, puis recharge le scénario fictif. Les comptes utilisateurs et leurs sessions sont conservés. Sans `DEMO_MODE=on`, le bouton n'existe pas et l'API refuse (404) : ne jamais l'activer sur un CRM qui contient de vraies données.
+
+Le bouton est volontairement isolé pour être retiré : `src/demo/routes.ts` (le commentaire en tête liste tout ce qu'il faut supprimer), `scenario.ts`, `defauts.ts`, `web/src/Demo.tsx` et ses tests.
+
 ## Devis
 
 Un devis se prépare depuis la fiche d'une affaire (« Préparer un devis ») et se retrouve dans l'écran **Devis**. Il pioche ses lignes dans le **catalogue d'articles** (Réglages > Articles : référence, nom, prix HT, « une fois » ou « chaque année »), et peut se faire de deux façons :

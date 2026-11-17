@@ -42,6 +42,7 @@ export function droitRequis(methode: string, chemin: string): Role {
   if (
     sous(chemin, '/etapes') ||
     sous(chemin, '/articles') ||
+    sous(chemin, '/demo') ||
     sous(chemin, '/pipelines') ||
     sous(chemin, '/indicateurs') ||
     sous(chemin, '/odoo')

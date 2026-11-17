@@ -47,6 +47,8 @@ describe('droit requis par route', () => {
     ['DELETE', '/contacts/1', 'admin'],
     ['POST', '/etapes', 'admin'],
     ['POST', '/articles', 'admin'],
+    ['POST', '/demo/charger', 'admin'],
+    ['GET', '/demo', 'lecture'],
     ['PATCH', '/articles/1', 'admin'],
     ['GET', '/articles', 'lecture'],
     ['POST', '/devis', 'commercial'],

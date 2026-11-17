@@ -18,6 +18,8 @@ export type Deps = {
   apiToken: string;
   // Derrière un proxy https : fait confiance à ses en-têtes (adresse du client, https).
   trustProxy?: boolean;
+  // Mode démonstration (bouton « Démo ») : voir src/demo/routes.ts.
+  demo?: boolean;
   // Présent seulement quand Odoo est configuré.
   odoo?: ServiceOdoo;
 };
@@ -30,6 +32,7 @@ export function buildApp({
   webDir,
   odoo,
   trustProxy,
+  demo,
 }: Deps): FastifyInstance {
   const app = Fastify({ logger: false, trustProxy: trustProxy ?? false });
   app.get('/health', async (_request, reply) => {
@@ -55,7 +58,7 @@ export function buildApp({
       await api.register((protege, _o, fin) => {
         exigerAuth(protege, auth, apiToken);
         routesConnectees(protege, auth);
-        registerRoutes(protege, db, odoo);
+        registerRoutes(protege, db, odoo, demo);
         fin();
       });
     },

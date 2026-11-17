@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { BoutonDemo } from './Demo';
 import { Logo } from './Logo';
 import { appel, ErreurApi, lire } from './api';
 import { Accueil } from './views/Accueil';
@@ -230,6 +231,7 @@ export function App() {
                 </a>
               ))}
             </div>
+            <BoutonDemo />
             <button className="link small" aria-label="Mon compte" onClick={() => setCompte(true)}>
               {nom}
               <span className="role-label"> · {LIBELLES_ROLE[role]}</span>
