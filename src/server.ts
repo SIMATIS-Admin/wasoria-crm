@@ -26,6 +26,7 @@ const app = buildApp({
   odoo: configOdoo ? creerServiceOdoo(db, configOdoo) : undefined,
   apiToken: config.apiToken,
   trustProxy: config.trustProxy,
+  demo: config.demo,
   pingDb: async () => {
     await pool.query('select 1');
   },

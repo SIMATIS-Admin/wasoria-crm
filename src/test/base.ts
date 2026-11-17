@@ -7,7 +7,7 @@ import { runMigrations } from '../migrate.js';
 export const JETON = 'jeton-de-test-0123456789abcdef';
 
 // Un Postgres jetable, migré, et l'app branchée dessus.
-export async function demarrerBase() {
+export async function demarrerBase(options: { demo?: boolean } = {}) {
   const conteneur = await new PostgreSqlContainer('postgres:17').start();
   const pool = new pg.Pool({ connectionString: conteneur.getConnectionUri() });
   await runMigrations(pool);
@@ -15,6 +15,7 @@ export async function demarrerBase() {
     db: createDb(pool),
     apiToken: JETON,
     version: 'test',
+    demo: options.demo,
     pingDb: async () => {
       await pool.query('select 1');
     },

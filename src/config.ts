@@ -13,6 +13,9 @@ const schema = z.object({
   PORT: z.coerce.number().int().positive().default(4400),
   // Écritures réelles vers les outils tiers (Odoo, OS) : off par défaut.
   REAL_WRITES: z.enum(['on', 'off']).default('off'),
+  // Mode démonstration : un bouton recharge un scénario fictif en EFFAÇANT les données. Jamais « on »
+  // sur un CRM qui contient de vraies données.
+  DEMO_MODE: z.enum(['on', 'off']).default('off'),
 });
 
 export type Config = {
@@ -21,6 +24,7 @@ export type Config = {
   trustProxy: boolean;
   port: number;
   realWrites: boolean;
+  demo: boolean;
 };
 
 export function loadConfig(env: Record<string, string | undefined>): Config {
@@ -30,12 +34,13 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
       `Configuration invalide : ${parsed.error.issues.map((i) => i.message).join(' ; ')}`,
     );
   }
-  const { DATABASE_URL, API_TOKEN, PORT, REAL_WRITES, TRUST_PROXY } = parsed.data;
+  const { DATABASE_URL, API_TOKEN, PORT, REAL_WRITES, TRUST_PROXY, DEMO_MODE } = parsed.data;
   return {
     databaseUrl: DATABASE_URL,
     apiToken: API_TOKEN,
     trustProxy: TRUST_PROXY === 'on',
     port: PORT,
     realWrites: REAL_WRITES === 'on',
+    demo: DEMO_MODE === 'on',
   };
 }
