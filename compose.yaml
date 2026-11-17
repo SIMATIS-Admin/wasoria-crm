@@ -1,0 +1,16 @@
+# Base Postgres locale pour développer et tester. Ne jamais lancer `docker compose down -v` : le -v efface la base.
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: wasoria
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?renseigner POSTGRES_PASSWORD dans .env}
+      POSTGRES_DB: wasoria
+    ports:
+      - '127.0.0.1:${DB_PORT:-5433}:5432'
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+volumes:
+  db-data:

@@ -10,7 +10,12 @@ afterAll(async () => {
 });
 
 const appel = (method: 'GET' | 'POST' | 'PATCH' | 'DELETE', url: string, payload?: object) =>
-  base.app.inject({ method, url, payload, headers: { authorization: `Bearer ${JETON}` } });
+  base.app.inject({
+    method,
+    url: `/api${url}`,
+    payload,
+    headers: { authorization: `Bearer ${JETON}` },
+  });
 type Fiche = {
   id: string;
   source: string;
@@ -25,11 +30,13 @@ const creer = async (url: string, payload: object) =>
   (await appel('POST', url, payload)).json<Fiche>();
 
 describe('accès', () => {
-  it('refuse sans jeton ou avec un mauvais jeton, sauf /health', async () => {
-    expect((await base.app.inject({ method: 'GET', url: '/entreprises' })).statusCode).toBe(401);
+  it('refuse sans jeton ou avec un mauvais jeton ; /health reste ouvert', async () => {
+    expect((await base.app.inject({ method: 'GET', url: '/api/entreprises' })).statusCode).toBe(
+      401,
+    );
     const mauvais = await base.app.inject({
       method: 'GET',
-      url: '/entreprises',
+      url: '/api/entreprises',
       headers: { authorization: 'Bearer faux' },
     });
     expect(mauvais.statusCode).toBe(401);

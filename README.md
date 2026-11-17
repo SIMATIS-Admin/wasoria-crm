@@ -4,6 +4,20 @@ CRM de WASORIA. Même modèle de données que le CRM de SIMATIS OS, pour communi
 
 > **Dépôt public** : code uniquement, aucune donnée réelle (voir [AGENTS.md](AGENTS.md)).
 
+## Tester en local
+
+Prérequis : Node 24 et Docker Desktop lancé.
+
+1. `cp .env.example .env`, puis renseigner dans `.env` : `POSTGRES_PASSWORD` et `API_TOKEN` (`openssl rand -hex 24` chacun), `DB_PORT=5433`, et `DATABASE_URL=postgres://wasoria:<POSTGRES_PASSWORD>@localhost:5433/wasoria`.
+2. `docker compose up -d` : démarre Postgres.
+3. `npm ci`, puis `npm run demo:seed` : charge des données **fictives** (uniquement dans une base vide).
+4. `npm run build`, puis `npm start`.
+5. Ouvrir http://localhost:4400 et saisir `API_TOKEN` comme jeton d'accès.
+
+Pour développer l'interface avec rechargement à chaud : `npm run dev` (API) et, dans un autre terminal, `npm run dev:web`, puis http://localhost:5173.
+
+Ne jamais lancer `docker compose down -v` : le `-v` efface la base.
+
 ## Démarrer
 
 Prérequis : Node 24, Docker (tests), un Postgres.
@@ -14,7 +28,7 @@ Prérequis : Node 24, Docker (tests), un Postgres.
 
 ## API
 
-Toutes les routes, sauf `/health`, exigent `Authorization: Bearer <API_TOKEN>`.
+L'API vit sous `/api` ; toutes ses routes exigent `Authorization: Bearer <API_TOKEN>`.
 
 | Ressource                   | Routes                                                        | Particularités                                                                                                   |
 | --------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
@@ -32,7 +46,7 @@ Listes paginées (`limite` jusqu'à 200, `decalage`). Une fiche créée ici est 
 
 1. Socle : schéma des objets, migrations, API de santé (fait).
 2. API CRM : entreprises, contacts, affaires, tâches, rendez-vous (fait). Reste : liens affaire ↔ contacts/entreprises, emails multiples, fusion.
-3. Interface : accueil, pipe, comptes, fiche affaire, devis.
+3. Interface : accueil, pipe, fiche affaire, comptes, tâches, rendez-vous (fait). Reste : devis (avec Odoo).
 4. Connecteur Odoo (deux sens, double verrou).
 5. Échange avec l'OS, profil `crm/1`.
 6. Serveur MCP.
