@@ -8,3 +8,24 @@ build/
 *.log
 .idea/
 .vscode/
+
+# Confidentialité : aucune donnée dans ce dépôt public
+data/
+fixtures/
+seeds/
+exports/
+maquette/
+*.csv
+*.xlsx
+*.xls
+*.sqlite
+*.sqlite3
+*.db
+*.sql
+*.dump
+*.pdf
+*.docx
+*.pptx
+*.zip
+*.pem
+*.key
