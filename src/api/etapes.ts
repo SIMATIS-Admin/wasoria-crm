@@ -2,7 +2,7 @@ import { asc, count, eq, sql } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type { Db } from '../db/index.js';
-import { etapes, opportunites } from '../db/schema.js';
+import { etapes, indicateurs, opportunites } from '../db/schema.js';
 import { ErreurRequete } from './ressource.js';
 
 // Les étapes du pipeline, modifiables. L'identifiant d'une étape ne change jamais (l'OS et les
@@ -119,6 +119,9 @@ export function registerEtapes(app: FastifyInstance, db: Db): void {
           .returning({ id: opportunites.id });
         deplacees = r.length;
       }
+      // Un indicateur qui s'appuyait sur cette étape est à reconfigurer.
+      await tx.update(indicateurs).set({ deEtape: null }).where(eq(indicateurs.deEtape, id));
+      await tx.update(indicateurs).set({ versEtape: null }).where(eq(indicateurs.versEtape, id));
       await tx.delete(etapes).where(eq(etapes.id, id));
       for (const [i, e] of toutes.filter((x) => x.id !== id).entries()) {
         await tx

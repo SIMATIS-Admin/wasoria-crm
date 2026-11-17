@@ -68,3 +68,19 @@ export type Etape = {
   ordre: number;
   probabilite: number;
 };
+
+export type Indicateur = {
+  id: string;
+  label: string;
+  type: 'delai' | 'conversion' | 'entrants';
+  unite: string;
+  deEtape: string | null;
+  versEtape: string | null;
+  objectif: number | null;
+  valeur: number | null;
+  moyenne?: number | null;
+  convertis?: number;
+  n: number;
+  statut: 'ok' | 'hors-objectif' | 'sans-objectif' | 'sans-donnee' | 'a-configurer';
+  serie?: { semaine: string; n: number }[];
+};

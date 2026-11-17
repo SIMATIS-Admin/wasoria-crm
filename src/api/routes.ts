@@ -13,6 +13,7 @@ import {
 } from '../db/schema.js';
 import { registerEchange } from '../echange/routes.js';
 import { registerLiens } from '../echange/liens.js';
+import { registerIndicateurs } from '../indicateurs/routes.js';
 import { etapeExiste, registerEtapes } from './etapes.js';
 import { enregistrer, ErreurRequete } from './ressource.js';
 import { creation, idSchema, miseAJour, TYPES_TACHE } from './schemas.js';
@@ -101,10 +102,15 @@ export function registerRoutes(app: FastifyInstance, db: Db, odoo?: ServiceOdoo)
       }
     },
     avant: (corps, existant) => {
+      let valeurs = corps;
+      // La clôture est datée (indicateurs) ; rouvrir l'affaire efface la date.
+      if ('clos' in corps && corps.clos !== (existant?.clos ?? null)) {
+        valeurs = { ...valeurs, closLe: corps.clos ? new Date() : null };
+      }
       const etape = corps.etape;
-      if (typeof etape !== 'string' || etape === existant?.etape) return corps;
+      if (typeof etape !== 'string' || etape === existant?.etape) return valeurs;
       const dates = (existant?.etapesDates ?? {}) as Record<string, string>;
-      return { ...corps, etapesDates: { ...dates, [etape]: new Date().toISOString() } };
+      return { ...valeurs, etapesDates: { ...dates, [etape]: new Date().toISOString() } };
     },
   });
 
@@ -210,6 +216,7 @@ export function registerRoutes(app: FastifyInstance, db: Db, odoo?: ServiceOdoo)
   });
 
   registerEtapes(app, db);
+  registerIndicateurs(app, db);
   registerLiens(app, db);
   registerEchange(app, db);
 

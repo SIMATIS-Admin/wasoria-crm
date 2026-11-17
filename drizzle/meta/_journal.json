@@ -43,6 +43,20 @@
       "when": 1794909324438,
       "tag": "0005_utilisateurs_sessions",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794913400410,
+      "tag": "0006_indicateurs",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794913400839,
+      "tag": "0007_indicateurs_par_defaut",
+      "breakpoints": true
     }
   ]
 }
