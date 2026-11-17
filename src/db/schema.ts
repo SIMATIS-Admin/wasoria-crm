@@ -273,3 +273,16 @@ export const rdvAffaires = pgTable(
   },
   (t) => [uniqueIndex('rdv_affaires_paire_idx').on(t.rendezVousId, t.opportuniteId)],
 );
+
+// Où en est chaque synchronisation avec un outil tiers : le curseur est la date de dernière
+// modification déjà copiée, pour ne relire que ce qui a changé.
+export const synchronisations = pgTable(
+  'synchronisations',
+  {
+    connecteur: text('connecteur').notNull(),
+    objet: text('objet').notNull(),
+    curseur: text('curseur'),
+    derniereExecution: timestamp('derniere_execution', { withTimezone: true }),
+  },
+  (t) => [uniqueIndex('synchronisations_pk_idx').on(t.connecteur, t.objet)],
+);

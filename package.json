@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev:web": "vite",
+    "odoo": "tsx --env-file=.env src/connecteurs/odoo/cli.ts",
     "demo:seed": "tsx --env-file=.env src/demo/seed.ts",
     "dev": "tsx watch --env-file=.env src/server.ts",
     "build": "tsc -p tsconfig.build.json && vite build",

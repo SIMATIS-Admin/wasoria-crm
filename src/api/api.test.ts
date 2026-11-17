@@ -204,3 +204,9 @@ describe('activités', () => {
     expect(liste.json<{ titre: string }[]>().map((x) => x.titre)).toEqual(['Note fictive']);
   });
 });
+
+describe('Odoo', () => {
+  it('répond 404 tant qu’Odoo n’est pas configuré', async () => {
+    expect((await appel('POST', '/odoo/synchro', {})).statusCode).toBe(404);
+  });
+});

@@ -1,5 +1,7 @@
 import pg from 'pg';
 import { buildApp } from './app.js';
+import { chargerConfigOdoo } from './connecteurs/odoo/config.js';
+import { creerServiceOdoo } from './connecteurs/odoo/service.js';
 import { createDb } from './db/index.js';
 import { loadConfig, type Config } from './config.js';
 import { runMigrations } from './migrate.js';
@@ -15,9 +17,13 @@ try {
 const pool = new pg.Pool({ connectionString: config.databaseUrl });
 await runMigrations(pool);
 
+const db = createDb(pool);
+const configOdoo = chargerConfigOdoo(process.env);
+
 const app = buildApp({
   webDir: new URL('./web', import.meta.url).pathname,
-  db: createDb(pool),
+  db,
+  odoo: configOdoo ? creerServiceOdoo(db, configOdoo) : undefined,
   apiToken: config.apiToken,
   pingDb: async () => {
     await pool.query('select 1');
