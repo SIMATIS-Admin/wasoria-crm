@@ -3,7 +3,10 @@ import { Logo } from './Logo';
 import { appel, ErreurApi, lire } from './api';
 import { Accueil } from './views/Accueil';
 import { Affaire } from './views/Affaire';
+import { Articles } from './views/Articles';
 import { Comptes } from './views/Comptes';
+import { Devis } from './views/Devis';
+import { DevisListe } from './views/DevisListe';
 import { MonCompte } from './MonCompte';
 import { LIBELLES_ROLE, RoleContext, type Role } from './role';
 import { Equipe } from './views/Equipe';
@@ -20,9 +23,16 @@ const VUES: { id: string; label: string; admin?: boolean }[] = [
   { id: 'comptes', label: 'Comptes' },
   { id: 'taches', label: 'Tâches' },
   { id: 'rdv', label: 'Rendez-vous' },
+  { id: 'devis', label: 'Devis' },
   { id: 'indicateurs', label: 'Indicateurs' },
-  { id: 'etapes', label: 'Étapes', admin: true },
-  { id: 'equipe', label: 'Équipe', admin: true },
+  { id: 'etapes', label: 'Réglages', admin: true },
+];
+
+// Les écrans de réglage, réunis sous une seule entrée du menu.
+const REGLAGES = [
+  { id: 'etapes', label: 'Étapes' },
+  { id: 'articles', label: 'Articles' },
+  { id: 'equipe', label: 'Équipe' },
 ];
 
 const TITRES: Record<string, [string, string]> = {
@@ -33,6 +43,8 @@ const TITRES: Record<string, [string, string]> = {
   taches: ['À faire', 'Tâches'],
   rdv: ['Agenda', 'Rendez-vous'],
   indicateurs: ['Cycle de vente', 'Indicateurs'],
+  devis: ['Propositions', 'Devis'],
+  articles: ['Réglages', 'Articles'],
   etapes: ['Réglages', 'Étapes du pipe'],
   equipe: ['Réglages', 'Équipe'],
 };
@@ -207,7 +219,11 @@ export function App() {
                   key={v.id}
                   href={`#${v.id}`}
                   className={
-                    actuelle === v.id || (actuelle === 'affaire' && v.id === 'pipe') ? 'on' : ''
+                    actuelle === v.id ||
+                    (actuelle === 'affaire' && v.id === 'pipe') ||
+                    (v.id === 'etapes' && REGLAGES.some((r) => r.id === actuelle))
+                      ? 'on'
+                      : ''
                   }
                 >
                   {v.label}
@@ -242,6 +258,17 @@ export function App() {
           {actuelle === 'taches' && <Taches />}
           {actuelle === 'rdv' && <RendezVous />}
           {actuelle === 'indicateurs' && <Indicateurs />}
+          {REGLAGES.some((r) => r.id === actuelle) && (
+            <nav className="seg reglages" aria-label="Réglages">
+              {REGLAGES.map((r) => (
+                <a key={r.id} href={`#${r.id}`} className={actuelle === r.id ? 'on' : ''}>
+                  {r.label}
+                </a>
+              ))}
+            </nav>
+          )}
+          {actuelle === 'devis' && (id ? <Devis key={id} id={id} /> : <DevisListe />)}
+          {actuelle === 'articles' && <Articles />}
           {actuelle === 'etapes' && <Etapes />}
           {actuelle === 'equipe' && <Equipe />}
         </section>

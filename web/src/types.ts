@@ -89,3 +89,63 @@ export type Indicateur = {
   statut: 'ok' | 'hors-objectif' | 'sans-objectif' | 'sans-donnee' | 'a-configurer';
   serie?: { semaine: string; n: number }[];
 };
+
+export type Article = {
+  id: string;
+  reference: string;
+  nom: string;
+  prix: number;
+  recurrent: boolean;
+  actif: boolean;
+  ordre: number;
+};
+
+export type LigneDevis = {
+  articleId: string | null;
+  designation: string;
+  prixUnitaire: number;
+  recurrent: boolean;
+  quantite: number;
+};
+
+export type TotauxDevis = {
+  investissement: number;
+  servicesAnnuels: number;
+  totalPremiereAnnee: number;
+  mensualite: number | null;
+  coutFinancement: number | null;
+  totalSurDuree: number | null;
+};
+
+export type StatutDevis = 'brouillon' | 'envoye' | 'accepte' | 'refuse';
+
+export type DevisDetail = {
+  id: string;
+  numero: string;
+  opportuniteId: string;
+  statut: StatutDevis;
+  formule: 'achat' | 'abonnement';
+  dureeMois: number;
+  tauxCentiemes: number;
+  intro: string | null;
+  envoyeLe: string | null;
+  decideLe: string | null;
+  createdAt: string;
+  lignes: LigneDevis[];
+  totaux: TotauxDevis;
+  affaire: { id: string; titre: string; pipelineId: string } | null;
+  entreprise: { id: string; nom: string; ville: string | null } | null;
+  contact: { nom: string; fonction: string | null } | null;
+};
+
+export type DevisResume = {
+  id: string;
+  numero: string;
+  statut: StatutDevis;
+  formule: 'achat' | 'abonnement';
+  opportuniteId: string;
+  affaire: string;
+  entreprise: string | null;
+  totaux: TotauxDevis;
+  createdAt: string;
+};

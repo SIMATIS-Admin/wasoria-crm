@@ -382,3 +382,74 @@ export const indicateurs = pgTable('indicateurs', {
   objectif: integer('objectif'),
   ordre: integer('ordre').notNull(),
 });
+
+// Le catalogue d'articles qui sert aux devis. Les prix sont en euros HT, entiers. Un article
+// désactivé ne se propose plus mais reste lisible dans les devis déjà faits (qui gardent leur
+// propre copie du nom et du prix). `recurrent` : facturé chaque année (maintenance, abonnement à
+// une plateforme…), sinon payé une fois.
+export const articles = pgTable(
+  'articles',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ...metierColumns(),
+    reference: text('reference').notNull(),
+    nom: text('nom').notNull(),
+    prix: integer('prix').notNull(),
+    recurrent: boolean('recurrent').notNull().default(false),
+    actif: boolean('actif').notNull().default(true),
+    ordre: integer('ordre').notNull().default(0),
+  },
+  (t) => [
+    uniqueIndex('articles_reference_idx').on(t.reference),
+    uniqueIndex('articles_source_idx').on(t.source, t.sourceId),
+  ],
+);
+
+export const STATUTS_DEVIS = ['brouillon', 'envoye', 'accepte', 'refuse'] as const;
+
+// Un devis d'une affaire. `formule` : achat (investissement payé, services annuels en plus) ou
+// abonnement (investissement financé au taux `tauxCentiemes` sur `dureeMois` mois, services annuels
+// lissés par mois). `numero` : D-<année>-<rang>, unique.
+export const devis = pgTable(
+  'devis',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ...metierColumns(),
+    numero: text('numero').notNull(),
+    opportuniteId: uuid('opportunite_id')
+      .notNull()
+      .references(() => opportunites.id),
+    statut: text('statut', { enum: STATUTS_DEVIS }).notNull().default('brouillon'),
+    formule: text('formule', { enum: ['achat', 'abonnement'] })
+      .notNull()
+      .default('achat'),
+    dureeMois: integer('duree_mois').notNull().default(48),
+    // 400 = 4,00 %
+    tauxCentiemes: integer('taux_centiemes').notNull().default(400),
+    intro: text('intro'),
+    envoyeLe: timestamp('envoye_le', { withTimezone: true }),
+    decideLe: timestamp('decide_le', { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex('devis_numero_idx').on(t.numero),
+    index('devis_opportunite_idx').on(t.opportuniteId),
+  ],
+);
+
+// Les lignes d'un devis gardent une copie de la désignation et du prix au moment du devis.
+export const devisLignes = pgTable(
+  'devis_lignes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    devisId: uuid('devis_id')
+      .notNull()
+      .references(() => devis.id, { onDelete: 'cascade' }),
+    articleId: uuid('article_id').references(() => articles.id, { onDelete: 'set null' }),
+    designation: text('designation').notNull(),
+    prixUnitaire: integer('prix_unitaire').notNull(),
+    recurrent: boolean('recurrent').notNull().default(false),
+    quantite: integer('quantite').notNull().default(1),
+    ordre: integer('ordre').notNull().default(0),
+  },
+  (t) => [index('devis_lignes_devis_idx').on(t.devisId)],
+);

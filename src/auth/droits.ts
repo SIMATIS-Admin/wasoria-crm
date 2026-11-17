@@ -41,6 +41,7 @@ export function droitRequis(methode: string, chemin: string): Role {
   // Réglages et intégrations : le pipe, les indicateurs, la synchro Odoo.
   if (
     sous(chemin, '/etapes') ||
+    sous(chemin, '/articles') ||
     sous(chemin, '/pipelines') ||
     sous(chemin, '/indicateurs') ||
     sous(chemin, '/odoo')

@@ -117,8 +117,7 @@ describe('App', () => {
     window.location.hash = '#pipe';
     render(<App />);
     expect(await screen.findByRole('button', { name: 'Nouvelle affaire' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Étapes' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Équipe' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Réglages' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Mon compte' }).textContent).toContain(
       'Administrateur',
     );
@@ -129,8 +128,7 @@ describe('App', () => {
     window.location.hash = '#pipe';
     render(<App />);
     expect(await screen.findByRole('button', { name: 'Nouvelle affaire' })).toBeTruthy();
-    expect(screen.queryByRole('link', { name: 'Étapes' })).toBeNull();
-    expect(screen.queryByRole('link', { name: 'Équipe' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Réglages' })).toBeNull();
   });
 
   it('une personne en lecture seule ne voit aucun bouton de création', async () => {
@@ -140,7 +138,7 @@ describe('App', () => {
     // le pipe est chargé (sa colonne est là) avant de constater qu'il n'y a pas de bouton
     await screen.findByText('Détection');
     expect(screen.queryByRole('button', { name: 'Nouvelle affaire' })).toBeNull();
-    expect(screen.queryByRole('link', { name: 'Étapes' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Réglages' })).toBeNull();
   });
 
   it('la page Équipe répond « réservé » à qui n’est pas administrateur', async () => {
