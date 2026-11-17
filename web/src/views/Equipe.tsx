@@ -13,10 +13,11 @@ type Compte = {
   derniereConnexion: string | null;
 };
 
-const ROLES: Role[] = ['admin', 'commercial', 'lecture'];
+const ROLES: Role[] = ['admin', 'commercial', 'apres-vente', 'lecture'];
 const AIDE: Record<Role, string> = {
   admin: 'Tout : supprimer, régler le pipe et les indicateurs, gérer les comptes.',
   commercial: 'Crée et modifie les fiches ; ne supprime pas et ne règle rien.',
+  'apres-vente': 'Comme un commercial, mais ne modifie que les affaires du pipe après-vente.',
   lecture: 'Consulte tout, ne modifie rien.',
 };
 

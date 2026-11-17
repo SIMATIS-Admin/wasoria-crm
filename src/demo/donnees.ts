@@ -91,6 +91,9 @@ export const AFFAIRES: {
   prochaineEtape: string;
   qualification: ReturnType<typeof q>;
   clos?: 'gagne' | 'perdu';
+  // Un dossier après-vente : son pipe, et la vente gagnée dont il vient (sa clé).
+  pipeline?: 'apres-vente';
+  depuis?: string;
 }[] = [
   {
     cle: 'x1',
@@ -209,6 +212,35 @@ export const AFFAIRES: {
     prochaineEtape: 'Planifier le démarrage',
     qualification: q(3, 3, 3, 3, 3),
     clos: 'gagne',
+  },
+  {
+    cle: 'x10',
+    e: 'a',
+    c: 'a1',
+    titre: 'Démo A · contrat signé · après-vente',
+    etape: 'suivi-mco',
+    montant: 4800,
+    echeance: date(60),
+    proprietaire: 'Pilote 4',
+    origine: 'Vente gagnée',
+    prochaineEtape: 'Visite de suivi',
+    qualification: q(0, 0, 0, 0, 0),
+    pipeline: 'apres-vente',
+    depuis: 'x9',
+  },
+  {
+    cle: 'x11',
+    e: 'c',
+    c: 'c1',
+    titre: 'Démo C · second site · après-vente',
+    etape: 'installation',
+    montant: 2100,
+    echeance: date(25),
+    proprietaire: 'Pilote 4',
+    origine: 'Vente gagnée',
+    prochaineEtape: 'Planifier l’installation',
+    qualification: q(0, 0, 0, 0, 0),
+    pipeline: 'apres-vente',
   },
 ];
 

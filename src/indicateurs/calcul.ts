@@ -9,6 +9,8 @@ export type AffaireCalcul = {
   etapesDates: Record<string, string>;
   clos: 'gagne' | 'perdu' | null;
   closLe: Date | null;
+  // Le pipe de l'affaire (« vente » si non précisé) : les entrants ne comptent que les ventes.
+  pipeline?: string;
 };
 
 export type Definition = {
@@ -90,6 +92,7 @@ export function calculer(
     }));
     let total = 0;
     for (const a of affaires) {
+      if ((a.pipeline ?? 'vente') !== 'vente') continue;
       if (a.creeLe < premiere || a.creeLe > maintenant) continue;
       const i = Math.floor(
         (debutDeSemaine(a.creeLe).getTime() - premiere.getTime()) / (7 * JOUR_MS),

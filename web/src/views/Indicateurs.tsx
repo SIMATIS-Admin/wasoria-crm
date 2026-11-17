@@ -24,17 +24,21 @@ export function Indicateurs() {
   const { estAdmin } = useRole();
   const [jours, setJours] = useState(90);
   const donnees = useApi<{ indicateurs: Indicateur[] }>(`/indicateurs?jours=${jours}`);
-  const etapes = useApi<Etape[]>('/etapes');
+  const etapes = useApi<Etape[]>('/etapes?pipeline=tous');
   const [edition, setEdition] = useState<Indicateur | null>(null);
   if (!donnees.donnees || !etapes.donnees)
     return <Chargement erreur={donnees.erreur ?? etapes.erreur} />;
 
+  // Les étapes de l'après-vente portent la mention de leur pipe.
+  const toutesEtapes = etapes.donnees.map((e) =>
+    e.pipelineId === 'apres-vente' ? { ...e, label: `${e.label} (après-vente)` } : e,
+  );
   const nomEtape = (id: string | null) =>
     id === GAGNE
       ? 'Gagnée'
       : id === PERDU
         ? 'Perdue'
-        : (etapes.donnees?.find((e) => e.id === id)?.label ?? id ?? '—');
+        : (toutesEtapes.find((e) => e.id === id)?.label ?? id ?? '—');
 
   return (
     <>
@@ -117,7 +121,7 @@ export function Indicateurs() {
       {edition && (
         <Reglage
           indicateur={edition}
-          etapes={etapes.donnees}
+          etapes={toutesEtapes}
           annuler={() => setEdition(null)}
           termine={() => {
             setEdition(null);

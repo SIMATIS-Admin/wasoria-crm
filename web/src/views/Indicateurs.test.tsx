@@ -78,7 +78,7 @@ function simuler() {
     appels.push({ url, methode, corps: init?.body ? JSON.parse(init.body as string) : undefined });
     const corps = url.startsWith('/api/indicateurs')
       ? { jours: 90, indicateurs: INDICATEURS }
-      : url === '/api/etapes'
+      : url.startsWith('/api/etapes')
         ? ETAPES
         : {};
     return Promise.resolve(new Response(JSON.stringify(corps), { status: 200 }));

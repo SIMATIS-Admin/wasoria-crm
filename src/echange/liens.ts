@@ -15,6 +15,7 @@ import {
   rendezVous,
 } from '../db/schema.js';
 import { idSchema } from '../api/schemas.js';
+import { peutModifierAffaire } from '../auth/droits.js';
 
 // Les liens plusieurs-à-plusieurs, comme dans le profil crm/1 : on envoie la liste complète d'un
 // lien, qui remplace l'ancienne. Le premier de la liste est le principal. Une liste absente du
@@ -32,10 +33,15 @@ export function registerLiens(app: FastifyInstance, db: Db): void {
     const ents = unique(corps.entreprises);
     return db.transaction(async (tx) => {
       const [a] = await tx
-        .select({ id: opportunites.id })
+        .select({ id: opportunites.id, pipelineId: opportunites.pipelineId })
         .from(opportunites)
         .where(eq(opportunites.id, affaireId));
       if (!a) return reply.code(404).send(introuvable);
+      if (request.utilisateur && !peutModifierAffaire(request.utilisateur.role, a.pipelineId)) {
+        return reply
+          .code(403)
+          .send({ erreur: 'Votre rôle ne modifie que les affaires du pipe après-vente' });
+      }
       if (cts) {
         await tx.delete(affaireContacts).where(eq(affaireContacts.opportuniteId, affaireId));
         if (cts.length) {

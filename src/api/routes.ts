@@ -5,8 +5,11 @@ import type { ServiceOdoo } from '../connecteurs/odoo/service.js';
 import type { Db } from '../db/index.js';
 import {
   activites,
+  affaireContacts,
+  affaireEntreprises,
   contacts,
   entreprises,
+  etapes,
   opportunites,
   rendezVous,
   taches,
@@ -14,8 +17,9 @@ import {
 import { registerEchange } from '../echange/routes.js';
 import { registerLiens } from '../echange/liens.js';
 import { registerIndicateurs } from '../indicateurs/routes.js';
-import { etapeExiste, registerEtapes } from './etapes.js';
-import { enregistrer, ErreurRequete } from './ressource.js';
+import { peutModifierAffaire } from '../auth/droits.js';
+import { etapeExiste, pipeExiste, registerEtapes } from './etapes.js';
+import { enregistrer, ErreurInterdit, ErreurRequete } from './ressource.js';
 import { creation, idSchema, miseAJour, TYPES_TACHE } from './schemas.js';
 
 const bool = z
@@ -39,6 +43,7 @@ export function registerRoutes(app: FastifyInstance, db: Db, odoo?: ServiceOdoo)
       });
     }
     if (error instanceof ErreurRequete) return reply.code(400).send({ erreur: error.message });
+    if (error instanceof ErreurInterdit) return reply.code(403).send({ erreur: error.message });
     // Clé étrangère (fiche encore liée) ou doublon : un conflit, pas une panne.
     // Drizzle enveloppe l'erreur Postgres : le code est sur l'erreur ou sur sa cause.
     const code =
@@ -89,20 +94,40 @@ export function registerRoutes(app: FastifyInstance, db: Db, odoo?: ServiceOdoo)
       etape: z.string().min(1).optional(),
       entrepriseId: idSchema.optional(),
       ouvertes: bool,
+      // `vente` par défaut ; `apres-vente`, ou `tous` pour tous les pipes.
+      pipeline: z.string().min(1).optional(),
     }),
     ou: (f) => [
+      f.pipeline === 'tous'
+        ? undefined
+        : eq(opportunites.pipelineId, (f.pipeline as string | undefined) ?? 'vente'),
       f.etape ? eq(opportunites.etape, f.etape as string) : undefined,
       f.entrepriseId ? eq(opportunites.entrepriseId, f.entrepriseId as string) : undefined,
       f.ouvertes ? isNull(opportunites.clos) : undefined,
     ],
     ordre: [desc(opportunites.updatedAt)],
-    verifier: async (c) => {
-      if (typeof c.etape === 'string' && !(await etapeExiste(db, c.etape))) {
-        throw new ErreurRequete(`Étape inconnue : ${c.etape}`);
+    verifier: async (c, { existant, utilisateur }) => {
+      const pipeline =
+        (existant?.pipelineId as string | undefined) ??
+        (c.pipeline as string | undefined) ??
+        'vente';
+      if (!existant && !(await pipeExiste(db, pipeline))) {
+        throw new ErreurRequete(`Pipe inconnu : ${pipeline}`);
+      }
+      if (utilisateur && !peutModifierAffaire(utilisateur.role, pipeline)) {
+        throw new ErreurInterdit('Votre rôle ne modifie que les affaires du pipe après-vente');
+      }
+      // L'étape doit être une étape du pipe de l'affaire.
+      if (typeof c.etape === 'string' && !(await etapeExiste(db, c.etape, pipeline))) {
+        throw new ErreurRequete(`Étape inconnue pour ce pipe : ${c.etape}`);
       }
     },
     avant: (corps, existant) => {
       let valeurs = corps;
+      if ('pipeline' in corps) {
+        const { pipeline, ...reste } = corps;
+        valeurs = { ...reste, pipelineId: pipeline };
+      }
       // La clôture est datée (indicateurs) ; rouvrir l'affaire efface la date.
       if ('clos' in corps && corps.clos !== (existant?.clos ?? null)) {
         valeurs = { ...valeurs, closLe: corps.clos ? new Date() : null };
@@ -112,6 +137,85 @@ export function registerRoutes(app: FastifyInstance, db: Db, odoo?: ServiceOdoo)
       const dates = (existant?.etapesDates ?? {}) as Record<string, string>;
       return { ...valeurs, etapesDates: { ...dates, [etape]: new Date().toISOString() } };
     },
+  });
+
+  // Une vente gagnée ouvre un dossier après-vente (installation, suivi) : même compte, mêmes contacts,
+  // première étape du pipe après-vente. Un seul dossier par vente.
+  app.post('/affaires/:id/apres-vente', async (request, reply) => {
+    const { id } = z.object({ id: idSchema }).parse(request.params);
+    const corps = z
+      .strictObject({
+        titre: z.string().trim().min(1).max(500).optional(),
+        montant: z.number().int().min(0).nullable().optional(),
+      })
+      .parse(request.body ?? {});
+    return db.transaction(async (tx) => {
+      const [vente] = await tx.select().from(opportunites).where(eq(opportunites.id, id));
+      if (!vente) return reply.code(404).send({ erreur: 'Fiche introuvable' });
+      if (vente.pipelineId !== 'vente' || vente.clos !== 'gagne') {
+        return reply
+          .code(409)
+          .send({ erreur: 'Seule une vente gagnée ouvre un dossier après-vente' });
+      }
+      const [deja] = await tx
+        .select({ id: opportunites.id })
+        .from(opportunites)
+        .where(eq(opportunites.origineAffaireId, id));
+      if (deja) {
+        return reply
+          .code(409)
+          .send({ erreur: 'Cette vente a déjà un dossier après-vente', id: deja.id });
+      }
+      const [premiere] = await tx
+        .select()
+        .from(etapes)
+        .where(eq(etapes.pipelineId, 'apres-vente'))
+        .orderBy(asc(etapes.ordre))
+        .limit(1);
+      if (!premiere)
+        return reply.code(409).send({ erreur: 'Le pipe après-vente n’a aucune étape' });
+      const [dossier] = await tx
+        .insert(opportunites)
+        .values({
+          pipelineId: 'apres-vente',
+          origineAffaireId: id,
+          titre: corps.titre ?? `${vente.titre} · après-vente`,
+          etape: premiere.id,
+          etapesDates: { [premiere.id]: new Date().toISOString() },
+          montant: corps.montant ?? null,
+          entrepriseId: vente.entrepriseId,
+          contactId: vente.contactId,
+          proprietaire: vente.proprietaire,
+        })
+        .returning();
+      const contactsLies = await tx
+        .select()
+        .from(affaireContacts)
+        .where(eq(affaireContacts.opportuniteId, id));
+      if (contactsLies.length) {
+        await tx.insert(affaireContacts).values(
+          contactsLies.map((l) => ({
+            opportuniteId: dossier!.id,
+            contactId: l.contactId,
+            principal: l.principal,
+          })),
+        );
+      }
+      const entreprisesLiees = await tx
+        .select()
+        .from(affaireEntreprises)
+        .where(eq(affaireEntreprises.opportuniteId, id));
+      if (entreprisesLiees.length) {
+        await tx.insert(affaireEntreprises).values(
+          entreprisesLiees.map((l) => ({
+            opportuniteId: dossier!.id,
+            entrepriseId: l.entrepriseId,
+            principal: l.principal,
+          })),
+        );
+      }
+      return reply.code(201).send(dossier);
+    });
   });
 
   enregistrer(app, db, {

@@ -72,6 +72,8 @@ export async function seedDemo(db: Db): Promise<boolean> {
           etapesDates: { [x.etape]: new Date().toISOString() },
           clos: x.clos ?? null,
           closLe: x.clos ? new Date() : null,
+          pipelineId: x.pipeline ?? 'vente',
+          origineAffaireId: x.depuis ? (a.get(x.depuis) ?? null) : null,
           source: 'demo',
         })
         .returning({ id: opportunites.id });
@@ -118,17 +120,25 @@ export async function seedDemo(db: Db): Promise<boolean> {
 // de quoi calculer. Les délais varient de 8 à 16 jours selon l'affaire et l'étape. Sans effet sur les
 // fiches qui ne viennent pas de la démonstration.
 export async function historiqueDemo(db: Db): Promise<number> {
-  const ordre = (await db.select({ id: etapes.id }).from(etapes).orderBy(asc(etapes.ordre))).map(
-    (e) => e.id,
-  );
+  // Les étapes de chaque pipe, dans l'ordre.
+  const parPipe = new Map<string, string[]>();
+  for (const e of await db.select().from(etapes).orderBy(asc(etapes.ordre))) {
+    parPipe.set(e.pipelineId, [...(parPipe.get(e.pipelineId) ?? []), e.id]);
+  }
   const affaires = await db
-    .select({ id: opportunites.id, etape: opportunites.etape, clos: opportunites.clos })
+    .select({
+      id: opportunites.id,
+      etape: opportunites.etape,
+      clos: opportunites.clos,
+      pipeline: opportunites.pipelineId,
+    })
     .from(opportunites)
     .where(eq(opportunites.source, 'demo'))
     .orderBy(asc(opportunites.titre));
   const maintenant = Date.now();
   const jour = 86_400_000;
   for (const [j, a] of affaires.entries()) {
+    const ordre = parPipe.get(a.pipeline) ?? [];
     const dernier = Math.max(0, ordre.indexOf(a.etape));
     let t = maintenant - (120 - 5 * j) * jour;
     const creee = new Date(t);

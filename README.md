@@ -30,6 +30,16 @@ Prérequis : Node 24, Docker (tests), un Postgres.
 
 L'API vit sous `/api`. Ses routes exigent soit une session ouverte par l'interface (cookie), soit `Authorization: Bearer <API_TOKEN>` pour les intégrations (connecteur de l'OS, scripts).
 
+## Après-vente
+
+Deux pipes : **Vente** (celui que partage l'OS) et **Après-vente** (installation, mise en service, suivi et maintien en conditions opérationnelles, renouvellement : étapes de départ à adapter dans l'écran « Étapes », un onglet par pipe). L'écran Pipe a un onglet par pipe.
+
+- Une affaire appartient à un pipe, choisi à la création et jamais changé ; son étape doit être une étape de ce pipe. Supprimer une étape déplace ses affaires vers une étape **du même pipe**.
+- Une **vente gagnée** ouvre un dossier après-vente (bouton « Créer le dossier après-vente » sur la fiche, ou `POST /api/affaires/:id/apres-vente`) : même compte, mêmes contacts, première étape du pipe après-vente, lien vers la vente d'origine. Un seul dossier par vente. On peut aussi créer un dossier seul.
+- Rôle **Après-vente** : comme un commercial, mais il ne crée ni ne modifie que les affaires du pipe après-vente (il lit tout le reste) ; il ouvre le pipe Après-vente par défaut.
+- **L'OS ne voit que la vente** : l'API d'échange et l'indicateur « opportunités entrantes » ignorent les dossiers après-vente. L'après-vente se suit ici seulement.
+- Pas encore : parc d'équipements installés, dates de visite de suivi et contrat de maintenance en champs dédiés, indicateurs propres à l'après-vente, second cerveau partagé avec l'après-vente. Le cahier des charges marque ce besoin « à confirmer » : le modèle (un second pipe de dossiers, ouvert depuis une vente gagnée) est à valider avec WASORIA.
+
 ## Indicateurs du cycle de vente
 
 Chaque changement d'étape d'une affaire est daté automatiquement (`etapesDates`), de même que sa clôture gagnée ou perdue (`closLe`). L'écran **Indicateurs** en tire, sur 30 à 365 jours :

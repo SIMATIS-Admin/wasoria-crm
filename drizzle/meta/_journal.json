@@ -71,6 +71,13 @@
       "when": 1794914230486,
       "tag": "0009_utilisateurs_existants_admin",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794917763591,
+      "tag": "0010_apres_vente",
+      "breakpoints": true
     }
   ]
 }

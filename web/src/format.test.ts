@@ -4,6 +4,8 @@ import type { Affaire } from './types';
 
 const affaire = (etape: string, montant: number | null): Affaire => ({
   id: etape + String(montant),
+  pipelineId: 'vente',
+  origineAffaireId: null,
   entrepriseId: null,
   contactId: null,
   titre: 'Test',

@@ -1,4 +1,5 @@
 import {
+  type AnyPgColumn,
   boolean,
   date,
   index,
@@ -92,6 +93,13 @@ export const opportunites = pgTable(
     etapesDates: jsonb('etapes_dates').$type<Record<string, string>>().notNull().default({}),
     // Date à laquelle l'affaire a été gagnée ou perdue (propre à ce CRM, sert aux indicateurs).
     closLe: timestamp('clos_le', { withTimezone: true }),
+    // Le pipe de l'affaire : une vente, ou un dossier après-vente (installation, suivi) qui peut
+    // venir d'une vente gagnée (`origineAffaireId`). Propre à ce CRM : l'OS ne voit que la vente.
+    pipelineId: text('pipeline_id')
+      .notNull()
+      .default('vente')
+      .references(() => pipelines.id),
+    origineAffaireId: uuid('origine_affaire_id').references((): AnyPgColumn => opportunites.id),
   },
   (t) => [uniqueIndex('opportunites_source_idx').on(t.source, t.sourceId)],
 );
@@ -289,10 +297,21 @@ export const synchronisations = pgTable(
   (t) => [uniqueIndex('synchronisations_pk_idx').on(t.connecteur, t.objet)],
 );
 
-// Les étapes du pipeline, partagées avec l'OS (même forme que ses étapes : id, libellé, ordre,
+// Les pipes (vente, après-vente) et leurs étapes. Les étapes du pipe de vente sont partagées avec l'OS (même forme que ses étapes : id, libellé, ordre,
 // étape de clôture, gagnée, probabilité de gain en %). L'affaire garde son étape et, à part, `clos`.
+export const pipelines = pgTable('pipelines', {
+  id: text('id').primaryKey(),
+  label: text('label').notNull(),
+  ordre: integer('ordre').notNull(),
+});
+
 export const etapes = pgTable('etapes', {
   id: text('id').primaryKey(),
+  // Chaque pipe a ses étapes : « vente » (celui que partage l'OS) et « apres-vente ».
+  pipelineId: text('pipeline_id')
+    .notNull()
+    .default('vente')
+    .references(() => pipelines.id),
   label: text('label').notNull(),
   ordre: integer('ordre').notNull(),
   clos: boolean('clos').notNull().default(false),
@@ -321,8 +340,9 @@ export const utilisateurs = pgTable(
     identifiant: text('identifiant').notNull(),
     nom: text('nom').notNull(),
     motDePasse: text('mot_de_passe').notNull(),
-    // Droits : admin (tout, comptes compris), commercial (crée et modifie), lecture (consulte).
-    role: text('role', { enum: ['admin', 'commercial', 'lecture'] })
+    // Droits : admin (tout, comptes compris), commercial (crée et modifie), après-vente (idem, mais
+    // seulement les affaires du pipe après-vente), lecture (consulte).
+    role: text('role', { enum: ['admin', 'commercial', 'apres-vente', 'lecture'] })
       .notNull()
       .default('commercial'),
     actif: boolean('actif').notNull().default(true),

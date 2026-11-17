@@ -13,10 +13,12 @@ export function Comptes() {
   const [dialogue, setDialogue] = useState<'entreprise' | 'contact' | null>(null);
   const chemin = `/entreprises?limite=200${recherche ? `&q=${encodeURIComponent(recherche)}` : ''}`;
   const liste = useApi<Entreprise[]>(chemin);
-  const etapes = useApi<Etape[]>('/etapes');
+  const etapes = useApi<Etape[]>('/etapes?pipeline=tous');
   const actif = choix ?? liste.donnees?.[0]?.id ?? null;
   const contacts = useApi<Contact[]>(actif ? `/contacts?entrepriseId=${actif}` : null);
-  const affaires = useApi<Affaire[]>(actif ? `/affaires?entrepriseId=${actif}` : null);
+  const affaires = useApi<Affaire[]>(
+    actif ? `/affaires?entrepriseId=${actif}&pipeline=tous` : null,
+  );
 
   if (!liste.donnees) return <Chargement erreur={liste.erreur} />;
   const courant = liste.donnees.find((e) => e.id === actif);
@@ -89,7 +91,8 @@ export function Comptes() {
                       {a.titre}
                     </a>{' '}
                     <span className="muted small">
-                      · {libelleEtape(a.etape, etapes.donnees ?? [])} · {eur(a.montant)}
+                      · {a.pipelineId === 'apres-vente' ? 'Après-vente · ' : ''}
+                      {libelleEtape(a.etape, etapes.donnees ?? [])} · {eur(a.montant)}
                     </span>
                   </div>
                 ))}

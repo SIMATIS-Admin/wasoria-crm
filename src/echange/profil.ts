@@ -157,7 +157,7 @@ export async function lireFiches(db: Db, objet: ObjetEchange, page: Page): Promi
       const rows = await db
         .select()
         .from(opportunites)
-        .where(fenetre(opportunites, depuis))
+        .where(and(fenetre(opportunites, depuis), eq(opportunites.pipelineId, 'vente')))
         .orderBy(asc(opportunites.updatedAt), asc(opportunites.id))
         .limit(limite)
         .offset(decalage);
@@ -315,5 +315,6 @@ export async function lireFiches(db: Db, objet: ObjetEchange, page: Page): Promi
 }
 
 export async function lireEtapes(db: Db) {
-  return db.select().from(etapes).orderBy(asc(etapes.ordre));
+  // Le pipe de vente seulement : c'est le seul que l'OS connaît.
+  return db.select().from(etapes).where(eq(etapes.pipelineId, 'vente')).orderBy(asc(etapes.ordre));
 }

@@ -21,8 +21,12 @@ export type Qualification = {
   timing: number;
   engagement: number;
 };
+export type Pipeline = { id: string; label: string; ordre: number };
+
 export type Affaire = {
   id: string;
+  pipelineId: string;
+  origineAffaireId: string | null;
   entrepriseId: string | null;
   contactId: string | null;
   titre: string;
@@ -64,6 +68,7 @@ export type Activite = {
 };
 export type Etape = {
   id: string;
+  pipelineId?: string;
   label: string;
   ordre: number;
   probabilite: number;

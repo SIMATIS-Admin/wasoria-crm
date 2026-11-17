@@ -5,14 +5,21 @@ import { z } from 'zod';
 import type { Db } from '../db/index.js';
 import { suppressions, type entreprises } from '../db/schema.js';
 import type { ObjetEchange } from '../echange/profil.js';
+import type { Utilisateur } from '../auth/service.js';
 import { idSchema, pagination } from './schemas.js';
 
 type Ligne = Record<string, unknown>;
 
 // Une requête refusée pour une raison métier : répond 400 avec le message.
 export class ErreurRequete extends Error {}
+// Une action refusée à cette personne, quelle que soit la requête : répond 403.
+export class ErreurInterdit extends Error {}
 
 type Cible = PgTable & { id: PgColumn };
+
+// Ce que sait un contrôle : la fiche avant modification (absente à la création) et qui appelle
+// (null pour le jeton des intégrations).
+export type ContexteVerif = { existant?: Ligne; utilisateur: Utilisateur | null };
 
 export type Definition = {
   chemin: string;
@@ -28,7 +35,7 @@ export type Definition = {
   // Transforme le corps reçu en valeurs prêtes pour la base ; `existant` = fiche avant mise à jour.
   avant?: (corps: Ligne, existant?: Ligne) => Ligne;
   // Contrôle asynchrone du corps reçu (ex. référence à une étape) ; lève ErreurRequete.
-  verifier?: (corps: Ligne) => Promise<void>;
+  verifier?: (corps: Ligne, contexte: ContexteVerif) => Promise<void>;
 };
 
 const introuvable = { erreur: 'Fiche introuvable' };
@@ -63,7 +70,7 @@ export function enregistrer(app: FastifyInstance, db: Db, d: Definition): void {
 
   app.post(d.chemin, async (request, reply) => {
     const corps = d.creation.parse(request.body);
-    await d.verifier?.(corps);
+    await d.verifier?.(corps, { utilisateur: request.utilisateur });
     const [fiche] = await db
       .insert(table)
       .values(avant(corps) as never)
@@ -74,9 +81,9 @@ export function enregistrer(app: FastifyInstance, db: Db, d: Definition): void {
   app.patch(`${d.chemin}/:id`, async (request, reply) => {
     const { id } = z.object({ id: idSchema }).parse(request.params);
     const corps = d.miseAJour.parse(request.body);
-    await d.verifier?.(corps);
     const [existant] = await db.select().from(table).where(eq(table.id, id));
     if (!existant) return reply.code(404).send(introuvable);
+    await d.verifier?.(corps, { existant: existant, utilisateur: request.utilisateur });
     const valeurs = avant(corps, existant);
     if (Object.keys(valeurs).length === 0) return existant;
     const [fiche] = await db
