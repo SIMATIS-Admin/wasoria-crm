@@ -1,7 +1,12 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { RoleContext } from '../role';
 import { Etapes } from './Etapes';
+
+const admin = (ui: React.ReactElement) => (
+  <RoleContext.Provider value="admin">{ui}</RoleContext.Provider>
+);
 
 type Appel = { url: string; methode: string; corps: unknown };
 
@@ -32,7 +37,7 @@ afterEach(() => {
 describe('Étapes', () => {
   it('liste les étapes du serveur et renomme au départ du champ', async () => {
     const appels = simuler();
-    render(<Etapes />);
+    render(admin(<Etapes />));
     const champ = await screen.findByLabelText('Nom de l’étape Première');
     fireEvent.change(champ, { target: { value: 'Premier contact' } });
     fireEvent.blur(champ);
@@ -46,7 +51,7 @@ describe('Étapes', () => {
 
   it('envoie le nouvel ordre quand on descend une étape', async () => {
     const appels = simuler();
-    render(<Etapes />);
+    render(admin(<Etapes />));
     fireEvent.click(await screen.findByRole('button', { name: 'Descendre Première' }));
     await waitFor(() =>
       expect(appels.find((a) => a.methode === 'PUT')).toMatchObject({
@@ -64,7 +69,7 @@ describe('Étapes', () => {
           { status: 409 },
         ),
     });
-    render(<Etapes />);
+    render(admin(<Etapes />));
     fireEvent.click(await screen.findByRole('button', { name: 'Supprimer Première' }));
     expect(await screen.findByText(/3 affaires sont dans cette étape/)).toBeTruthy();
 
@@ -76,7 +81,7 @@ describe('Étapes', () => {
 
   it('ajoute une étape avec sa probabilité', async () => {
     const appels = simuler();
-    render(<Etapes />);
+    render(admin(<Etapes />));
     fireEvent.change(await screen.findByLabelText('Nouvelle étape'), {
       target: { value: 'Signature' },
     });

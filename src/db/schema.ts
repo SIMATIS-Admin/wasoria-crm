@@ -313,7 +313,7 @@ export const suppressions = pgTable(
 );
 
 // Comptes qui se connectent à l'interface. Le mot de passe n'est jamais stocké : seulement son
-// empreinte (scrypt, avec sel). Tous les comptes ont les mêmes droits pour l'instant.
+// empreinte (scrypt, avec sel).
 export const utilisateurs = pgTable(
   'utilisateurs',
   {
@@ -321,6 +321,10 @@ export const utilisateurs = pgTable(
     identifiant: text('identifiant').notNull(),
     nom: text('nom').notNull(),
     motDePasse: text('mot_de_passe').notNull(),
+    // Droits : admin (tout, comptes compris), commercial (crée et modifie), lecture (consulte).
+    role: text('role', { enum: ['admin', 'commercial', 'lecture'] })
+      .notNull()
+      .default('commercial'),
     actif: boolean('actif').notNull().default(true),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     derniereConnexion: timestamp('derniere_connexion', { withTimezone: true }),

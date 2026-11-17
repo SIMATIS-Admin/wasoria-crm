@@ -3,20 +3,25 @@ import { appel, ErreurApi, lire } from './api';
 import { Accueil } from './views/Accueil';
 import { Affaire } from './views/Affaire';
 import { Comptes } from './views/Comptes';
+import { MonCompte } from './MonCompte';
+import { LIBELLES_ROLE, RoleContext, type Role } from './role';
+import { Equipe } from './views/Equipe';
 import { Etapes } from './views/Etapes';
 import { Indicateurs } from './views/Indicateurs';
 import { Pipe } from './views/Pipe';
 import { RendezVous } from './views/RendezVous';
 import { Taches } from './views/Taches';
 
-const VUES = [
+// `admin` : réservé aux administrateurs (le serveur refuse de toute façon les autres).
+const VUES: { id: string; label: string; admin?: boolean }[] = [
   { id: 'accueil', label: 'Accueil' },
   { id: 'pipe', label: 'Pipe' },
   { id: 'comptes', label: 'Comptes' },
   { id: 'taches', label: 'Tâches' },
   { id: 'rdv', label: 'Rendez-vous' },
   { id: 'indicateurs', label: 'Indicateurs' },
-  { id: 'etapes', label: 'Étapes' },
+  { id: 'etapes', label: 'Étapes', admin: true },
+  { id: 'equipe', label: 'Équipe', admin: true },
 ];
 
 const TITRES: Record<string, [string, string]> = {
@@ -28,6 +33,7 @@ const TITRES: Record<string, [string, string]> = {
   rdv: ['Agenda', 'Rendez-vous'],
   indicateurs: ['Cycle de vente', 'Indicateurs'],
   etapes: ['Réglages', 'Étapes du pipe'],
+  equipe: ['Réglages', 'Équipe'],
 };
 
 // Route par ancre (#pipe, #affaire/<id>) : pas de serveur de routes à configurer.
@@ -36,7 +42,7 @@ export const lireRoute = (hash: string) => {
   return { vue: vue || 'accueil', id };
 };
 
-type Moi = { utilisateur: { id: string; identifiant: string; nom: string } };
+type Moi = { utilisateur: { id: string; identifiant: string; nom: string; role: Role } };
 
 const texte = (d: FormData, nom: string) => {
   const v = d.get(nom);
@@ -134,6 +140,8 @@ type Statut = 'chargement' | 'connexion' | 'installation' | 'connecte';
 export function App() {
   const [statut, setStatut] = useState<Statut>('chargement');
   const [nom, setNom] = useState('');
+  const [role, setRole] = useState<Role>('lecture');
+  const [compte, setCompte] = useState(false);
   const [hash, setHash] = useState(window.location.hash);
 
   // Qui est connecté ? Sinon : faut-il créer le premier compte, ou se connecter ?
@@ -141,6 +149,7 @@ export function App() {
     try {
       const moi = await lire<Moi>('/moi');
       setNom(moi.utilisateur.nom);
+      setRole(moi.utilisateur.role);
       setStatut('connecte');
     } catch {
       try {
@@ -179,7 +188,7 @@ export function App() {
   const [eyebrow, titre] = TITRES[actuelle]!;
 
   return (
-    <>
+    <RoleContext.Provider value={role}>
       <header className="navbar">
         <div className="wrap">
           <nav className="pillnav" aria-label="Navigation">
@@ -187,7 +196,7 @@ export function App() {
               WASORIA
             </a>
             <div className="links">
-              {VUES.map((v) => (
+              {VUES.filter((v) => !v.admin || role === 'admin').map((v) => (
                 <a
                   key={v.id}
                   href={`#${v.id}`}
@@ -199,7 +208,10 @@ export function App() {
                 </a>
               ))}
             </div>
-            <span className="muted small">{nom}</span>
+            <button className="link small" aria-label="Mon compte" onClick={() => setCompte(true)}>
+              {nom}
+              <span className="role-label"> · {LIBELLES_ROLE[role]}</span>
+            </button>
             <button
               className="ghost"
               onClick={() => {
@@ -225,8 +237,10 @@ export function App() {
           {actuelle === 'rdv' && <RendezVous />}
           {actuelle === 'indicateurs' && <Indicateurs />}
           {actuelle === 'etapes' && <Etapes />}
+          {actuelle === 'equipe' && <Equipe />}
         </section>
       </main>
-    </>
+      {compte && <MonCompte nom={nom} role={role} fermer={() => setCompte(false)} />}
+    </RoleContext.Provider>
   );
 }

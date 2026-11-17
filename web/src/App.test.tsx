@@ -38,13 +38,13 @@ describe('App', () => {
     const fetchSimule = vi.fn((url: string, init?: RequestInit) => {
       if (url === '/api/moi') {
         return connecte
-          ? json({ utilisateur: { id: '1', identifiant: 'marc', nom: 'Marc' } })
+          ? json({ utilisateur: { id: '1', identifiant: 'marc', nom: 'Marc', role: 'admin' } })
           : json({ erreur: 'Connexion requise' }, 401);
       }
       if (url === '/api/etat') return json({ installe: true });
       if (url === '/api/connexion') {
         connecte = true;
-        return json({ utilisateur: { id: '1', identifiant: 'marc', nom: 'Marc' } });
+        return json({ utilisateur: { id: '1', identifiant: 'marc', nom: 'Marc', role: 'admin' } });
       }
       if (url === '/api/etapes') {
         return json([
@@ -99,5 +99,54 @@ describe('App', () => {
     );
     render(<App />);
     await waitFor(() => expect(screen.getByRole('button', { name: 'Se connecter' })).toBeTruthy());
+  });
+
+  function simulerConnecte(role: string) {
+    vi.stubGlobal('fetch', (url: string) => {
+      if (url === '/api/moi') {
+        return json({ utilisateur: { id: '1', identifiant: 'x', nom: 'Personne', role } });
+      }
+      if (url === '/api/etapes')
+        return json([{ id: 'detection', label: 'Détection', ordre: 1, probabilite: 10 }]);
+      return json([]);
+    });
+  }
+
+  it('un administrateur voit les réglages et la gestion des comptes', async () => {
+    simulerConnecte('admin');
+    window.location.hash = '#pipe';
+    render(<App />);
+    expect(await screen.findByRole('button', { name: 'Nouvelle affaire' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Étapes' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Équipe' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Mon compte' }).textContent).toContain(
+      'Administrateur',
+    );
+  });
+
+  it('un commercial crée des fiches mais ne voit pas les réglages', async () => {
+    simulerConnecte('commercial');
+    window.location.hash = '#pipe';
+    render(<App />);
+    expect(await screen.findByRole('button', { name: 'Nouvelle affaire' })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Étapes' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Équipe' })).toBeNull();
+  });
+
+  it('une personne en lecture seule ne voit aucun bouton de création', async () => {
+    simulerConnecte('lecture');
+    window.location.hash = '#pipe';
+    render(<App />);
+    // le pipe est chargé (sa colonne est là) avant de constater qu'il n'y a pas de bouton
+    await screen.findByText('Détection');
+    expect(screen.queryByRole('button', { name: 'Nouvelle affaire' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Étapes' })).toBeNull();
+  });
+
+  it('la page Équipe répond « réservé » à qui n’est pas administrateur', async () => {
+    simulerConnecte('commercial');
+    window.location.hash = '#equipe';
+    render(<App />);
+    expect(await screen.findByText('Réservé aux administrateurs.')).toBeTruthy();
   });
 });

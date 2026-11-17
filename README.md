@@ -46,9 +46,20 @@ Pour donner un parcours daté aux affaires de démonstration déjà chargées : 
 
 - Connexion par identifiant et mot de passe. Le mot de passe n'est jamais stocké, seulement son empreinte (scrypt, avec sel) ; la session est un cookie `HttpOnly`, `SameSite=Strict` (et `Secure` en https), valable 7 jours d'activité ; la base ne garde que l'empreinte du jeton de session.
 - Après 5 échecs sur un même compte depuis une même adresse, la connexion est bloquée 15 minutes. Un identifiant inconnu et un mauvais mot de passe reçoivent la même réponse.
-- Gérer les comptes en ligne de commande (le mot de passe se saisit au clavier, rien ne s'affiche) : `npm run utilisateur -- creer <identifiant> --nom "Nom"`, `mot-de-passe <identifiant>` (ferme ses sessions), `desactiver <identifiant>`, `activer <identifiant>`, `lister`.
+- **Trois rôles** :
+
+  | Rôle           | Peut                                                                                                                                          |
+  | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+  | Administrateur | tout : supprimer des fiches, régler les étapes et les indicateurs, lancer la synchro Odoo, gérer les comptes                                  |
+  | Commercial     | consulter, créer et modifier les fiches (entreprises, contacts, affaires, tâches, rendez-vous, notes, liens) ; ne supprime pas, ne règle rien |
+  | Lecture seule  | consulter tout, ne modifier rien                                                                                                              |
+
+  Le premier compte créé à l'installation est administrateur ; les comptes existants avant l'arrivée des rôles le sont devenus. Les droits sont vérifiés par le serveur à chaque appel (l'interface masque seulement ce qui serait refusé). Changer le rôle d'un compte ferme ses sessions : la personne se reconnecte avec ses nouveaux droits. Il reste toujours un administrateur actif, et on ne désactive pas son propre compte.
+
+- **Écran Équipe** (administrateurs) : créer un compte avec son rôle, changer un rôle, désactiver ou réactiver, réinitialiser un mot de passe. **Mon compte** (clic sur son nom, en haut) : changer son propre mot de passe, avec l'actuel ; ses autres sessions se ferment.
+- Le jeton `API_TOKEN` des intégrations (OS, scripts) lit et écrit les données, mais ne gère pas les comptes.
+- En ligne de commande : `npm run utilisateur -- creer <identifiant> --nom "Nom" --role admin|commercial|lecture`, `role <identifiant> <role>`, `mot-de-passe <identifiant>` (ferme ses sessions), `desactiver <identifiant>`, `activer <identifiant>`, `lister`.
 - Derrière un proxy https, mettre `TRUST_PROXY=on` pour le cookie `Secure` et l'adresse réelle du client.
-- Tous les comptes ont les mêmes droits pour l'instant (pas de rôles).
 
 | Ressource                   | Routes                                                        | Particularités                                                                                                   |
 | --------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
