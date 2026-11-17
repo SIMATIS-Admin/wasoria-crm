@@ -29,3 +29,6 @@ maquette/
 *.zip
 *.pem
 *.key
+
+# Migrations de schéma (code, pas des données)
+!drizzle/*.sql
