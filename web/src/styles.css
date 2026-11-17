@@ -96,9 +96,37 @@ a {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
 }
 .logo {
-  font-weight: 600;
-  letter-spacing: 0.22em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   flex: none;
+}
+.logo-svg {
+  height: 22px;
+  width: auto;
+  display: block;
+}
+.os {
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.22em;
+  color: var(--fg-2);
+}
+.titre-connexion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.titre-connexion .logo-svg {
+  height: 26px;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 .links {
   display: flex;
