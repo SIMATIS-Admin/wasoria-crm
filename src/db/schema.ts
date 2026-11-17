@@ -90,6 +90,8 @@ export const opportunites = pgTable(
     prochaineEtape: text('prochaine_etape'),
     derniereActivite: timestamp('derniere_activite', { withTimezone: true }),
     etapesDates: jsonb('etapes_dates').$type<Record<string, string>>().notNull().default({}),
+    // Date à laquelle l'affaire a été gagnée ou perdue (propre à ce CRM, sert aux indicateurs).
+    closLe: timestamp('clos_le', { withTimezone: true }),
   },
   (t) => [uniqueIndex('opportunites_source_idx').on(t.source, t.sourceId)],
 );
@@ -341,3 +343,18 @@ export const sessions = pgTable(
   },
   (t) => [index('sessions_utilisateur_idx').on(t.utilisateurId)],
 );
+
+// Les indicateurs du cycle de vente. Ils se calculent sur les dates d'étapes des affaires :
+//  - delai : jours entre l'arrivée dans `de_etape` et dans `vers_etape` ;
+//  - conversion : part des affaires entrées dans `de_etape` qui ont atteint `vers_etape` ;
+//  - entrants : affaires créées par semaine.
+// `@gagne` et `@perdu` désignent la clôture d'une affaire. Les étapes se règlent dans l'interface.
+export const indicateurs = pgTable('indicateurs', {
+  id: text('id').primaryKey(),
+  label: text('label').notNull(),
+  type: text('type', { enum: ['delai', 'conversion', 'entrants'] }).notNull(),
+  deEtape: text('de_etape'),
+  versEtape: text('vers_etape'),
+  objectif: integer('objectif'),
+  ordre: integer('ordre').notNull(),
+});

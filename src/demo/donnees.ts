@@ -78,7 +78,20 @@ const q = (
   engagement,
 });
 
-export const AFFAIRES = [
+export const AFFAIRES: {
+  cle: string;
+  e: string;
+  c: string;
+  titre: string;
+  etape: string;
+  montant: number | null;
+  echeance: string | null;
+  proprietaire: string;
+  origine: string;
+  prochaineEtape: string;
+  qualification: ReturnType<typeof q>;
+  clos?: 'gagne' | 'perdu';
+}[] = [
   {
     cle: 'x1',
     e: 'a',
@@ -182,6 +195,20 @@ export const AFFAIRES = [
     origine: 'Client existant',
     prochaineEtape: 'Point de suivi',
     qualification: q(3, 3, 2, 3, 1),
+  },
+  {
+    cle: 'x9',
+    e: 'a',
+    c: 'a1',
+    titre: 'Démo A · contrat signé',
+    etape: 'negociation',
+    montant: 22000,
+    echeance: date(-10),
+    proprietaire: 'Pilote 1',
+    origine: 'Client existant',
+    prochaineEtape: 'Planifier le démarrage',
+    qualification: q(3, 3, 3, 3, 3),
+    clos: 'gagne',
   },
 ];
 

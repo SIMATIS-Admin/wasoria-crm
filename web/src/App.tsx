@@ -4,6 +4,7 @@ import { Accueil } from './views/Accueil';
 import { Affaire } from './views/Affaire';
 import { Comptes } from './views/Comptes';
 import { Etapes } from './views/Etapes';
+import { Indicateurs } from './views/Indicateurs';
 import { Pipe } from './views/Pipe';
 import { RendezVous } from './views/RendezVous';
 import { Taches } from './views/Taches';
@@ -14,6 +15,7 @@ const VUES = [
   { id: 'comptes', label: 'Comptes' },
   { id: 'taches', label: 'Tâches' },
   { id: 'rdv', label: 'Rendez-vous' },
+  { id: 'indicateurs', label: 'Indicateurs' },
   { id: 'etapes', label: 'Étapes' },
 ];
 
@@ -24,6 +26,7 @@ const TITRES: Record<string, [string, string]> = {
   comptes: ['Clients et prospects', 'Comptes'],
   taches: ['À faire', 'Tâches'],
   rdv: ['Agenda', 'Rendez-vous'],
+  indicateurs: ['Cycle de vente', 'Indicateurs'],
   etapes: ['Réglages', 'Étapes du pipe'],
 };
 
@@ -220,6 +223,7 @@ export function App() {
           {actuelle === 'comptes' && <Comptes />}
           {actuelle === 'taches' && <Taches />}
           {actuelle === 'rdv' && <RendezVous />}
+          {actuelle === 'indicateurs' && <Indicateurs />}
           {actuelle === 'etapes' && <Etapes />}
         </section>
       </main>

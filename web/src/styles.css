@@ -616,3 +616,86 @@ td select {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.periode {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.g3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.indic {
+  display: grid;
+  gap: 8px;
+  padding: 16px 18px;
+  align-content: start;
+}
+.indic .tete {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: flex-start;
+}
+.indic .t {
+  font-size: 13px;
+  color: var(--fg-2);
+}
+.indic .v {
+  font-weight: 300;
+  font-size: 34px;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.indic .v small {
+  font-size: 14px;
+  color: var(--muted);
+  margin-left: 6px;
+}
+.barres {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 48px;
+}
+.barres span {
+  flex: 1;
+  min-height: 2px;
+  background: var(--blue);
+  border-radius: 2px 2px 0 0;
+  opacity: 0.85;
+}
+@media (max-width: 1000px) {
+  .g3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 700px) {
+  .g3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px;
+  gap: 3px;
+}
+.seg button {
+  border: 0;
+  background: transparent;
+  padding: 6px 14px;
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--muted);
+  border-radius: 999px;
+}
+.seg button:hover {
+  color: #fff;
+}
+.seg button.on {
+  background: var(--blue);
+  color: #fff;
+}

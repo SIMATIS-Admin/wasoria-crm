@@ -30,6 +30,18 @@ Prérequis : Node 24, Docker (tests), un Postgres.
 
 L'API vit sous `/api`. Ses routes exigent soit une session ouverte par l'interface (cookie), soit `Authorization: Bearer <API_TOKEN>` pour les intégrations (connecteur de l'OS, scripts).
 
+## Indicateurs du cycle de vente
+
+Chaque changement d'étape d'une affaire est daté automatiquement (`etapesDates`), de même que sa clôture gagnée ou perdue (`closLe`). L'écran **Indicateurs** en tire, sur 30 à 365 jours :
+
+- des **délais** (médiane et moyenne, en jours) entre l'arrivée dans deux étapes, ou jusqu'à la commande : par défaut la remise du devis et la première réponse ;
+- des **conversions** (part des affaires entrées dans une étape qui ont atteint une autre, ou la commande) : par défaut du contact à la visite et du devis à la commande ;
+- les **opportunités entrantes par semaine** (affaires créées).
+
+Les étapes de départ et d'arrivée et les objectifs se règlent par indicateur (bouton « Régler »). Les réglages de départ sont des hypothèses à valider avec WASORIA : quelles étapes marquent le contact, la visite, le devis. Supprimer une étape qui servait à un indicateur le remet « à configurer ». Les affaires qui n'ont pas franchi les deux étapes ne comptent pas dans un délai ; dans une conversion, celles qui n'ont pas (encore) atteint l'étape d'arrivée comptent comme non converties. Si une affaire repasse par une étape, c'est la dernière arrivée qui est retenue.
+
+Pour donner un parcours daté aux affaires de démonstration déjà chargées : `npm run demo:seed -- --historique`.
+
 ## Comptes et connexion
 
 - Connexion par identifiant et mot de passe. Le mot de passe n'est jamais stocké, seulement son empreinte (scrypt, avec sel) ; la session est un cookie `HttpOnly`, `SameSite=Strict` (et `Secure` en https), valable 7 jours d'activité ; la base ne garde que l'empreinte du jeton de session.

@@ -1,10 +1,11 @@
 import pg from 'pg';
-import { count } from 'drizzle-orm';
+import { asc, count, eq } from 'drizzle-orm';
 import { createDb, type Db } from '../db/index.js';
 import {
   activites,
   contacts,
   entreprises,
+  etapes,
   opportunites,
   rendezVous,
   taches,
@@ -69,6 +70,8 @@ export async function seedDemo(db: Db): Promise<boolean> {
           prochaineEtape: x.prochaineEtape,
           qualification: x.qualification,
           etapesDates: { [x.etape]: new Date().toISOString() },
+          clos: x.clos ?? null,
+          closLe: x.clos ? new Date() : null,
           source: 'demo',
         })
         .returning({ id: opportunites.id });
@@ -107,7 +110,43 @@ export async function seedDemo(db: Db): Promise<boolean> {
       });
     }
   });
+  await historiqueDemo(db);
   return true;
+}
+
+// Donne aux affaires de démonstration un parcours daté, étape par étape, pour que les indicateurs aient
+// de quoi calculer. Les délais varient de 8 à 16 jours selon l'affaire et l'étape. Sans effet sur les
+// fiches qui ne viennent pas de la démonstration.
+export async function historiqueDemo(db: Db): Promise<number> {
+  const ordre = (await db.select({ id: etapes.id }).from(etapes).orderBy(asc(etapes.ordre))).map(
+    (e) => e.id,
+  );
+  const affaires = await db
+    .select({ id: opportunites.id, etape: opportunites.etape, clos: opportunites.clos })
+    .from(opportunites)
+    .where(eq(opportunites.source, 'demo'))
+    .orderBy(asc(opportunites.titre));
+  const maintenant = Date.now();
+  const jour = 86_400_000;
+  for (const [j, a] of affaires.entries()) {
+    const dernier = Math.max(0, ordre.indexOf(a.etape));
+    let t = maintenant - (120 - 5 * j) * jour;
+    const creee = new Date(t);
+    const dates: Record<string, string> = {};
+    for (const [k, id] of ordre.slice(0, dernier + 1).entries()) {
+      if (k > 0) t += (8 + ((j * 3 + k * 5) % 9)) * jour;
+      dates[id] = new Date(t).toISOString();
+    }
+    await db
+      .update(opportunites)
+      .set({
+        etapesDates: dates,
+        createdAt: creee,
+        closLe: a.clos ? new Date(Math.min(t + 10 * jour, maintenant)) : null,
+      })
+      .where(eq(opportunites.id, a.id));
+  }
+  return affaires.length;
 }
 
 // Lancé en ligne de commande : npm run demo:seed
@@ -119,7 +158,12 @@ if (process.argv[1]?.endsWith('seed.ts')) {
   }
   const pool = new pg.Pool({ connectionString: url });
   await runMigrations(pool);
-  const fait = await seedDemo(createDb(pool));
-  console.log(fait ? 'Données de démonstration chargées.' : 'Base non vide : rien chargé.');
+  const db = createDb(pool);
+  if (process.argv.includes('--historique')) {
+    console.log(`Parcours daté ajouté à ${await historiqueDemo(db)} affaire(s) de démonstration.`);
+  } else {
+    const fait = await seedDemo(db);
+    console.log(fait ? 'Données de démonstration chargées.' : 'Base non vide : rien chargé.');
+  }
   await pool.end();
 }
